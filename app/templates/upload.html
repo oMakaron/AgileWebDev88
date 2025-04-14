@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Page</title>
+</head>
+<body>
+    <h1>Upload a File</h1>
+    <form method="POST">
+      {{ form.hidden_tag() }}
+      {{ form.string() }}
+      {{ form.submit() }}
+    </form>
+</body>
+</html>
