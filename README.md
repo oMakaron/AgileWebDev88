@@ -15,7 +15,7 @@ cd AgileWebDev88
 ### 2. Setting up a Virtual Environment
 ```bash
 python3 -m venv venv
-source venv/activate/bin
+source venv/bin/activate
 ```
 
 ### 3. Installing Requirements
