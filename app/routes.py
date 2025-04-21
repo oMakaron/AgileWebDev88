@@ -22,6 +22,8 @@ from wtforms.validators import DataRequired
 import pandas
 import io
 
+import matplotlib
+matplotlib.use('Agg') 
 import matplotlib.pyplot
 import os
 
@@ -33,7 +35,7 @@ class UploadForm(FlaskForm):
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
     form = UploadForm()
-    PathOfChart = None #path for fronted
+    path_chart = None #path for fronted
 
     # validate_on_submit returns True if the method is POST
     # and the field conforms to all valiadators
@@ -62,13 +64,13 @@ def upload():
             df.plot(x=x_col, y=y_col, kind='bar', legend=False) # we can change type bar to the others, just for now
             matplotlib.pyplot.tight_layout()
             
-            PathOfStatic = os.path.join(app.root_path, 'static', 'chart.png')
-            matplotlib.pyplot.savefig(PathOfStatic)
+            path_static = os.path.join(app.root_path, 'static', 'chart.png')
+            matplotlib.pyplot.savefig(path_static)
             matplotlib.pyplot.close()
             
-            PathOfChart = 'chart.png'
+            path_chart = 'chart.png'
 
-    return render_template('upload.html', form=form, chart=PathOfChart)
+    return render_template('upload.html', form=form, chart=path_chart)
 
 # ------------------------------------------------------------------
 
