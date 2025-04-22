@@ -11,5 +11,8 @@
       {{ form.file.label }} {{ form.file() }} <br><br>
       {{ form.submit() }}
     </form>
+    {% if result %}
+        <pre> {{ result }} </pre>
+    {% endif %}
 </body>
 </html>

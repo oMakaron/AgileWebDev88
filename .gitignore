@@ -1,2 +1,6 @@
+# general python files to ignore
 __pycache__
 venv/
+
+# leave coverage to the individual client
+.coverage

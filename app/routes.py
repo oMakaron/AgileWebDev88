@@ -30,15 +30,16 @@ class UploadForm(FlaskForm):
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
     form = UploadForm()
+    result = None
 
     # validate_on_submit returns True if the method is POST
     # and the field conforms to all valiadators
     if form.validate_on_submit():
         file_data = io.BytesIO(form.file.data.read())
         df = pd.read_csv(file_data, encoding='utf-8')
-        print(df.head())  # Only for debugging and print first few rows.
+        result = repr(df.head())  # Only for debugging and print first few rows.
 
-    return render_template('upload.html', form=form)
+    return render_template('upload.html', form=form, result=result)
 
 # ------------------------------------------------------------------
 
