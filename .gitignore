@@ -3,7 +3,7 @@ __pycache__
 
 # things we don't want to upload to GitHub
 venv/
-static/*.png
+app/static/*.png
 
 # leave coverage to the individual client
 .coverage
