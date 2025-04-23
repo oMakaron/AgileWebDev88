@@ -1,6 +1,9 @@
 # general python files to ignore
 __pycache__
+
+# things we don't want to upload to GitHub
 venv/
+static/*.png
 
 # leave coverage to the individual client
 .coverage

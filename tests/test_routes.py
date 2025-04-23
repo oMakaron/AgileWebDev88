@@ -31,14 +31,13 @@ class Test(TestCase):
         data = make_csv(
             'test.csv', [
                 ['Header1', 'Header2', 'Header3'],
-                ['Body1',   'Body2',   'Body3'],
-                ['Body4',   'Body5',   'Body6'],
+                ['Body1',   'Body2',   '3'],
+                ['Body4',   'Body5',   '6'],
             ])
 
         response = self.client.post('/upload', data=data, content_type='multipart/form-data')
 
         self.assertEqual(200, response.status_code)
-        self.assertIn(b"  Header1 Header2 Header3", response.data)
-        self.assertIn(b"0   Body1   Body2   Body3", response.data)
-        self.assertIn(b"1   Body4   Body5   Body6", response.data)
+        print(response.data.decode('utf-8'))
+        self.assertIn(b"<img src=", response.data)
 
