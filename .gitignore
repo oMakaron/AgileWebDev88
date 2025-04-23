@@ -1,6 +1,9 @@
 # general python files to ignore
 __pycache__
+
+# stuff we don't want to upload
 venv/
+static/*.png
 
 # leave coverage to the individual client
 .coverage

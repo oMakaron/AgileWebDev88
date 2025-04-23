@@ -11,8 +11,10 @@
       {{ form.file.label }} {{ form.file() }} <br><br>
       {{ form.submit() }}
     </form>
-    {% if result %}
-        <pre> {{ result }} </pre>
+
+    {% if chart %}
+      <h2>Chart:</h2>
+      <img src="{{ url_for('static', filename=chart) }}" alt="Chart">
     {% endif %}
 </body>
 </html>
