@@ -38,6 +38,5 @@ class Test(TestCase):
         response = self.client.post('/upload', data=data, content_type='multipart/form-data')
 
         self.assertEqual(200, response.status_code)
-        print(response.data.decode('utf-8'))
         self.assertIn(b"<img src=", response.data)
 
