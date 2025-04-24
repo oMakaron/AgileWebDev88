@@ -8,12 +8,13 @@
     <!-- enctype="multipart/form-data" allows files to be sent -->
     <form method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
-        {{ form.file.label }} {{ form.file() }} <br><br>
+            {{ form.file.label }} {{ form.file() }} <br>
+            {{ form.spec.label }} {{ form.spec() }} <br><br>
         {{ form.submit() }}
     </form>
     {% if chart %}
       <h2>Chart:</h2>
-      <img src="{{ url_for('static', filename=chart) }}" alt="Chart">
+      <img src="{{ chart }}" alt="Chart">
     {% endif %}
 </body>
 </html>
