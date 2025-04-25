@@ -117,11 +117,12 @@ class Parser:
             return
         self._current = self._tokens.next_token()
 
-    def parse(self) -> dict[str, str]:
+    def parse(self) -> dict[str, str | list[str]]:
+        # entry ::= spec
         self._current = self._tokens.next_token()
         return self._parse_spec()
 
-    def _parse_spec(self) -> dict[str, str]:
+    def _parse_spec(self) -> dict[str, str | list[str]]:
         # spec ::= decl [',' decl]*
         res = dict()
         while True:
@@ -131,16 +132,34 @@ class Parser:
                 return res
             self._advance()
 
-    def _parse_decl(self) -> Tuple[str, str]:
-        # decl ::= name '=' name
+    def _parse_decl(self) -> Tuple[str, str | list[str]]:
+        # decl ::= name '=' (name | '[' name_list ']')
         key = self._parse_name()
 
         self._expect('=', 'statement requires assignment.')
         self._advance()
 
-        value = self._parse_name()
+        if self._match('['):
+            self._advance()
+            value = self._parse_name_list()
+            self._expect(']', 'brackets were never terminated.')
+            self._advance()
+        else:
+            value = self._parse_name()
 
         return key, value
+
+    def _parse_name_list(self) -> list[str]:
+        # name_list ::= name [',' name]+
+        names = []
+        read_one = False
+        while True:
+            names.append(self._parse_name())
+            if not self._match(',') and read_one:
+                return names
+            self._expect(',', 'can\'t have a list of one element.')
+            self._advance()
+            read_one = True
 
     def _parse_name(self) -> str:
         # name ::= [a-zA-Z]

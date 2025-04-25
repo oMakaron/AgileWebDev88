@@ -108,3 +108,18 @@ class Test(TestCase):
         with self.assertRaises(ParseError):
             Parser(tk).parse()
 
+    def test_assignment_list(self) -> None:
+        tk = Tokenizer('hello = [world, exclamation]')
+        ps = Parser(tk).parse()
+        self.assertEqual({'hello': ['world', 'exclamation']}, ps)
+
+    def test_assigment_list_one_element(self) -> None:
+        tk = Tokenizer('hello = [world]')
+        with self.assertRaises(ParseError):
+            Parser(tk).parse()
+
+    def test_full_example(self) -> None:
+        tk = Tokenizer('type = line, y = [header, header], x = header')
+        ps = Parser(tk).parse()
+        self.assertEqual({'type': 'line', 'x': 'header', 'y': ['header', 'header']}, ps)
+
