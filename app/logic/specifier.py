@@ -103,38 +103,52 @@ class Parser:
         self._tokens = tokens
         self._current = Token.new_error('No Tokens!', 0)
 
+    def _match(self, is_a) -> bool:
+        return self._current.is_a == is_a
+
     def _expect(self, is_a: str, message: str) -> str:
-        if not self._current.is_a == is_a:
+        if not self._match(is_a):
             raise ParseError(message)
         return self._current.lex
 
+    def _advance(self) -> None:
+        if not self._tokens.has_more():
+            self._current = Token.new_error('run out of tokens.', self._tokens._head)
+            return
+        self._current = self._tokens.next_token()
+
     def parse(self) -> dict[str, str]:
         self._current = self._tokens.next_token()
+        return self._parse_spec()
 
-        if not self._current.is_a == 'name':
-            raise Exception('expected a name')
-        key = self._current.lex
+    def _parse_spec(self) -> dict[str, str]:
+        # spec ::= decl [',' decl]*
+        res = dict()
+        while True:
+            key, value = self._parse_decl()
+            res[key] = value
+            if not self._match(','):
+                return res
+            self._advance()
 
-        if not self._tokens.has_more():
-            raise Exception('statement is incomplete')
-        self._current = self._tokens.next_token()
+    def _parse_decl(self) -> Tuple[str, str]:
+        # decl ::= name '=' name
+        key = self._parse_name()
 
-        if not self._current.is_a == '=':
-            raise Exception('statement requires an assignment')
-        _ = self._current.lex
+        self._expect('=', 'statement requires assignment.')
+        self._advance()
 
-        if not self._tokens.has_more():
-            raise Exception('statement is incomplete')
-        self._current = self._tokens.next_token()
+        value = self._parse_name()
 
-        if not self._current.is_a == 'name':
-            raise Exception('rhs of assignment requires a value')
-        value = self._current.lex
+        return key, value
 
-        if self._tokens.has_more():
-            raise Exception('expected end of statement')
+    def _parse_name(self) -> str:
+        # name ::= [a-zA-Z]
+        name = self._expect('name', 'expected a name.')
+        self._advance()
+        return name
 
-        return {key: value}
+
 
 
 class Specifier:

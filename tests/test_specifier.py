@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from app.logic.specifier import Parser, Specifier, Tokenizer
+from app.logic.specifier import ParseError, Parser, Specifier, Tokenizer
 
 
 class Test(TestCase):
@@ -92,4 +92,19 @@ class Test(TestCase):
         tk = Tokenizer('hello = world')
         ps = Parser(tk).parse()
         self.assertEqual({'hello': 'world'}, ps)
+
+    def test_parser_error(self) -> None:
+        tk = Tokenizer('hello world')
+        with self.assertRaises(ParseError):
+            Parser(tk).parse()
+
+    def test_multiple_statements(self) -> None:
+        tk = Tokenizer('hello = world, world = earth')
+        ps = Parser(tk).parse()
+        self.assertEqual({'hello': 'world', 'world': 'earth'}, ps)
+
+    def test_trailing_comma_errors(self) -> None:
+        tk = Tokenizer('hello = world, world = earth,')
+        with self.assertRaises(ParseError):
+            Parser(tk).parse()
 
