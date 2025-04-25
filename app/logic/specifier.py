@@ -11,8 +11,9 @@ from typing import Tuple
 # Grammar:
 #
 #        spec ::= declaration [',' declaration]*
-# declaration ::= name '=' (name | '[' name_list ']')
-#   name_list ::= name [',' name]+
+# declaration ::= name '=' (value | '[' value_list ']')
+#  value_list ::= value [',' value]+
+#       value ::= [a-zA-Z][a-zA-Z0-9]*
 #        name ::= [a-zA-Z]+
 #
 
@@ -37,14 +38,22 @@ class Token:
     def new_name(value: str, pos: int) -> Token:
         return Token('name', value, pos)
 
+    @staticmethod
+    def new_value(value: str, pos: int) -> Token:
+        return Token('value', value, pos)
+
+
 
 class Tokenizer:
 
     def __init__(self, source: str) -> None:
         self._source = source
         self._head, self._tail = 0, 0
-        self._punctuation = {',', '=', '[', ']'}
         self._has_more = True
+
+        self._punctuation = {',', '=', '[', ']'}
+        self._alpha = set('abcdefghijklmnopqrstuvwxyz')
+        self._alpha_num = self._alpha | set('0123456789')
 
 
     def _at(self, index: int) -> str:
@@ -82,9 +91,16 @@ class Tokenizer:
                 return Token.new_punctuation(elem, self._tail)
 
         # matches names
-        if self._current().lower() in 'abcdefghijklmnopqrstuvwxyz':
-            while self.has_more() and self._current().lower() in 'abcdefghijklmnopqrstuvwxyz':
+        if self._current().lower() in self._alpha:
+            while self.has_more() and self._current().lower() in self._alpha:
                 self._head += 1
+
+            # matched values, which can end with a number
+            if self.has_more() and self._current().lower() in self._alpha_num:
+                while self.has_more() and self._current() in self._alpha_num:
+                    self._head += 1
+                return Token.new_value(self._get_lexeme(), self._tail)
+
             return Token.new_name(self._get_lexeme(), self._tail)
 
         # if we didn't match anything it's an error, set has_more to false
@@ -133,7 +149,7 @@ class Parser:
             self._advance()
 
     def _parse_decl(self) -> Tuple[str, str | list[str]]:
-        # decl ::= name '=' (name | '[' name_list ']')
+        # decl ::= name '=' (value | '[' value_list ']')
         key = self._parse_name()
 
         self._expect('=', 'statement requires assignment.')
@@ -141,28 +157,36 @@ class Parser:
 
         if self._match('['):
             self._advance()
-            value = self._parse_name_list()
+            value = self._parse_value_list()
             self._expect(']', 'brackets were never terminated.')
             self._advance()
         else:
-            value = self._parse_name()
+            value = self._parse_value()
 
         return key, value
 
-    def _parse_name_list(self) -> list[str]:
+    def _parse_value_list(self) -> list[str]:
         # name_list ::= name [',' name]+
         names = []
         read_one = False
         while True:
-            names.append(self._parse_name())
+            names.append(self._parse_value())
             if not self._match(',') and read_one:
                 return names
             self._expect(',', 'can\'t have a list of one element.')
             self._advance()
             read_one = True
 
+    def _parse_value(self) -> str:
+        # value ::= [a-zA-Z]+[a-zA-Z0-9]*
+        if self._match('name'):
+            return self._parse_name()
+        value = self._expect('value', 'excpected a value')
+        self._advance()
+        return value
+
     def _parse_name(self) -> str:
-        # name ::= [a-zA-Z]
+        # name ::= [a-zA-Z]+
         name = self._expect('name', 'expected a name.')
         self._advance()
         return name

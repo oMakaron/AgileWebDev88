@@ -86,6 +86,18 @@ class Test(TestCase):
             [elem.lex for elem in res]
         )
 
+    def test_tokenizer_tokenizes_value(self) -> None:
+        tk = Tokenizer('hello = [world, exclamationmark42]')
+
+        res = []
+        while tk.has_more():
+            res.append(tk.next_token())
+
+        self.assertEqual(
+            ['hello', '=', '[', 'world', ',', 'exclamationmark42', ']'],
+            [elem.lex for elem in res]
+        )
+
     # Parser tests
 
     def test_parser(self) -> None:
@@ -122,4 +134,9 @@ class Test(TestCase):
         tk = Tokenizer('type = line, y = [header, header], x = header')
         ps = Parser(tk).parse()
         self.assertEqual({'type': 'line', 'x': 'header', 'y': ['header', 'header']}, ps)
+
+    def test_full_example_with_numbers(self) -> None:
+        tk = Tokenizer('type = line, y = [header2, header3], x = header1')
+        ps = Parser(tk).parse()
+        self.assertEqual({'type': 'line', 'x': 'header1', 'y': ['header2', 'header3']}, ps)
 
