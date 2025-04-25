@@ -23,8 +23,10 @@ import pandas
 import io
 
 import matplotlib
-matplotlib.use('Agg') 
+matplotlib.use('Agg')
+
 import matplotlib.pyplot
+
 import os
 
 
@@ -42,7 +44,7 @@ def upload():
     if form.validate_on_submit():
         user_file = io.BytesIO(form.file.data.read())
         df = pandas.read_csv(user_file, encoding='utf-8')
-        
+
         #a really basic way to generating image
         x_col = None
         y_col = None
@@ -57,22 +59,20 @@ def upload():
                 y_col = col
                 if col != x_col:
                     break
-        
-        
+
+
         if x_col and y_col:
             matplotlib.pyplot.figure(figsize=(4, 2))  # chart size we can change later
             df.plot(x=x_col, y=y_col, kind='bar', legend=False) # we can change type bar to the others, just for now
             matplotlib.pyplot.tight_layout()
-            
+
             path_static = os.path.join(app.root_path, 'static', 'chart.png')
             matplotlib.pyplot.savefig(path_static)
             matplotlib.pyplot.close()
-            
+
             path_chart = 'chart.png'
 
     return render_template('upload.html', form=form, chart=path_chart)
 
 # ------------------------------------------------------------------
-
-
 
