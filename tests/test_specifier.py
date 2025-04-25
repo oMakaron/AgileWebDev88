@@ -20,7 +20,7 @@ class Test(TestCase):
             Specifier.from_string('x=x')
 
     def test_given_no_headers(self) -> None:
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ParseError):
             Specifier.from_string('')
 
     # Tokenizer tests
@@ -60,6 +60,11 @@ class Test(TestCase):
             [elem.lex for elem in res]
 
         )
+
+    def test_tokenizer_fails_on_empty(self) -> None:
+        tk = Tokenizer('').next_token()
+        self.assertEqual('error', tk.is_a)
+        self.assertEqual('there are no tokens.', tk.lex)
 
     def test_tokenizer_stops_itself_simple(self) -> None:
         tk = Tokenizer('hello = world')
@@ -139,4 +144,18 @@ class Test(TestCase):
         tk = Tokenizer('type = line, y = [header2, header3], x = header1')
         ps = Parser(tk).parse()
         self.assertEqual({'type': 'line', 'x': 'header1', 'y': ['header2', 'header3']}, ps)
+
+    def test_error_message(self) -> None:
+        res = None
+        try:
+            tk = Tokenizer('type = line, y = [header1,a],')
+            Parser(tk).parse()
+        except ParseError as p:
+            res = str(p)
+        self.assertEqual(
+            "[Parse Error]:\n" \
+            "type = line, y = [header1,a],\n" \
+            "                             ^~ expected a name.",
+            res
+        )
 

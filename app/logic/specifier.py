@@ -85,6 +85,9 @@ class Tokenizer:
         while self._match(' '):
             self._tail = self._head
 
+        if not self._head < len(self._source):
+            return Token.new_error('there are no tokens.', self._head)
+
         # match single character tokens
         for elem in self._punctuation:
             if self._match(elem):
@@ -110,7 +113,11 @@ class Tokenizer:
 
 
 class ParseError(Exception):
-    ...
+
+    def __init__(self, source: str, pos: int, message: str) -> None:
+        desc = f"[Parse Error]:"
+        outline = f"{' ' * pos}^{'~' * (len(source) - pos)}~ {message}"
+        super().__init__('\n'.join((desc, source, outline)))
 
 
 class Parser:
@@ -124,7 +131,7 @@ class Parser:
 
     def _expect(self, is_a: str, message: str) -> str:
         if not self._match(is_a):
-            raise ParseError(message)
+            raise ParseError(self._tokens._source, self._current.pos, message)
         return self._current.lex
 
     def _advance(self) -> None:
@@ -192,30 +199,28 @@ class Parser:
         return name
 
 
-
-
 class Specifier:
     dimensions: tuple[int, int]
-    x: str | None
-    y: str | None
+    x: str | list[str] | None
+    y: str | list[str] | None
 
     def __init__(self) -> None:
         self.x, self.y = None, None
         self.dimensions = (10, 8)
 
-    def set_x(self, x: str) -> Specifier:
+    def set_x(self, x: str | list[str]) -> Specifier:
         self.x = x
         return self
 
-    def set_y(self, y: str) -> Specifier:
+    def set_y(self, y: str | list[str]) -> Specifier:
         self.y = y
         return self
 
     @staticmethod
     def from_string(format: str) -> Specifier:
 
-        # TODO: parse in a more robust manner than just split + replace
-        spec = dict(elem.split('=') for elem in format.replace(' ', '').split(','))
+        tokens = Tokenizer(format)
+        spec = Parser(tokens).parse()
 
         if not 'x' in spec or not 'y' in spec:
             raise ValueError("Graph needs both x and y axes to be plotted.")
