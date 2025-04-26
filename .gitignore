@@ -1,3 +1,25 @@
-__pycache__
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 venv/
+
+# Flask environment files
+instance/
+.env
+
+# Static files
 static/*.png
+static/css/output.css
+
+# Node.js (Tailwind)
+node_modules/
+package-lock.json
+
+# VS Code config
+.vscode/
+
+# OS system junk
+.DS_Store
+Thumbs.db
