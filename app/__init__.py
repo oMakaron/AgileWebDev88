@@ -3,8 +3,8 @@ from flask import Flask
 # Tell Flask where to find the static folder
 app = Flask(
     __name__,
-    static_folder='../static',         # static is outside /app
-    template_folder='templates'        # templates are inside /app
+    static_folder='../static',
+    template_folder='templates'
 )
 
 # TODO: Make this not absolutely suck
