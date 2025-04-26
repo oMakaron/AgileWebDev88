@@ -44,6 +44,7 @@ def upload():
     if form.validate_on_submit():
         user_file = io.BytesIO(form.file.data.read())
         df = pandas.read_csv(user_file, encoding='utf-8')
+        df.to_csv("dataFrame.csv", index= False) # For importing purposes, would be better to use database
 
         #a really basic way to generating image
         x_col = None
@@ -76,3 +77,114 @@ def upload():
 
 # ------------------------------------------------------------------
 
+import plots
+from flask import send_file, request
+
+# plot endpoints
+@app.route('/plot/line')
+def plotLine():
+    x = request.args.get('xCol')                            
+    y = request.args.get('yCol').split(',') # format str,str,...
+    title = request.args.get('title', default= 'Line Plot') 
+    color = request.args.get('color', default= 'blue')
+    xlabel = request.args.get('xlabel')
+    ylabel = request.args.get('ylabel')
+    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
+    fig = (int(fig[0]), int(fig[1]))
+    grid = request.args.get('grid', type= int)
+    grid = True if grid == 1 else False
+
+    plotData = plots.plot_line(x_col= x, y_col= y, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
+    return send_file(plotData, mimetype='image/png')
+
+@app.route('/plot/scatter')
+def plotScat():
+    x = request.args.get('xCol')                            
+    y = request.args.get('yCol').split(',') # format str,str,...
+    title = request.args.get('title', default= 'Scatter Plot') 
+    color = request.args.get('color', default= 'blue')
+    xlabel = request.args.get('xlabel')
+    ylabel = request.args.get('ylabel')
+    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
+    fig = (int(fig[0]), int(fig[1]))
+    grid = request.args.get('grid', type= int)
+    grid = True if grid == 1 else False
+
+    plotData = plots.plot_scatter(x_col= x, y_col= y, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
+    return send_file(plotData, mimetype='image/png')
+
+@app.route('/plot/bar')
+def plotBar():
+    x = request.args.get('xCol')                            
+    y = request.args.get('yCol').split(',') # format str,str,...
+    title = request.args.get('title', default= 'Bar Plot') 
+    color = request.args.get('color', default= 'blue')
+    xlabel = request.args.get('xlabel')
+    ylabel = request.args.get('ylabel')
+    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
+    fig = (int(fig[0]), int(fig[1]))
+    grid = request.args.get('grid', type= int)
+    grid = True if grid == 1 else False
+
+    plotData = plots.plot_bar(x_col= x, y_col= y, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
+    return send_file(plotData, mimetype='image/png')
+
+@app.route('/plot/histogram')
+def plotHist():
+    col = request.args.get('col')                            
+    title = request.args.get('title', default= 'Pie Chart') 
+    color = request.args.get('color', default= 'blue')
+    xlabel = request.args.get('xlabel')
+    ylabel = request.args.get('ylabel', default= 'Frequency')
+    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
+    fig = (int(fig[0]), int(fig[1]))
+    grid = request.args.get('grid', type= int)
+    grid = True if grid == 1 else False
+    bin = request.args.get('bins', type= int)
+
+    plotData = plots.plot_histogram(column= col, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid, bins= bin)
+    return send_file(plotData, mimetype='image/png')
+
+@app.route('/plot/pie')
+def plotPie():
+    col = request.args.get('col')                            
+    title = request.args.get('title', default= 'Histogram Plot') 
+    fig = request.args.get('fig', default= '8,8').split(',')   # format num,num
+    fig = (int(fig[0]), int(fig[1]))
+    angle = request.args.get('angle', type= int, default= 90)
+
+    plotData = plots.plot_pie(column= col, title= title, figsize= fig, angle= angle)
+    return send_file(plotData, mimetype='image/png')
+
+@app.route('/plot/area')
+def plotArea():
+    x = request.args.get('xCol')                            
+    y = request.args.get('yCol').split(',') # format str,str,...
+    title = request.args.get('title', default= 'Area Plot') 
+    color = request.args.get('color', default= 'blue')
+    xlabel = request.args.get('xlabel')
+    ylabel = request.args.get('ylabel')
+    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
+    fig = (int(fig[0]), int(fig[1]))
+    grid = request.args.get('grid', type= int)
+    grid = True if grid == 1 else False
+
+    plotData = plots.plot_area(x_col= x, y_col= y, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
+    return send_file(plotData, mimetype='image/png')
+
+@app.route('/plot/box')
+def plotBox():
+    x = request.args.get('xCol')                            
+    y = request.args.get('yCol').split(',') # format str,str,...
+    title = request.args.get('title', default= 'Box Plot') 
+    xlabel = request.args.get('xlabel')
+    ylabel = request.args.get('ylabel')
+    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
+    fig = (int(fig[0]), int(fig[1]))
+    grid = request.args.get('grid', type= int)
+    grid = True if grid == 1 else False
+
+    plotData = plots.plot_box(x_col= x, y_col= y, title= title, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
+    return send_file(plotData, mimetype='image/png')
+
+# ------------------------------------------------------------------
