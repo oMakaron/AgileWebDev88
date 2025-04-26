@@ -9,6 +9,9 @@ def index():
 def login():
     return render_template("login.html")
 
+@app.route('/dashboard')
+def dashboard():
+    return render_template("dashboard.html")
 
 # ------------------------------------------------------------------
 # TODO: Move this to a forms.py file if we end up with more forms

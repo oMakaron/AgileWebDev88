@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – DataVizApp{% endblock %}
+
+{% block content %}
+  <div class="grid grid-cols-3 gap-6 h-full">
+    <!-- Left panel: Data & Analytics -->
+    <section class="bg-white p-4 rounded-xl shadow overflow-auto">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase mb-2">Data</h2>
+      <ul class="space-y-1 text-sm text-gray-700">
+        <li class="font-medium">Dimensions</li>
+        <ul class="pl-4 list-disc space-y-1">
+          <li>Area</li>
+          <li>Industry</li>
+          <li>…</li>
+        </ul>
+        <li class="mt-4 font-medium">Measures</li>
+        <ul class="pl-4 list-disc space-y-1">
+          <li>2016:Q1</li>
+          <li>2016:Q2</li>
+          <li>…</li>
+        </ul>
+      </ul>
+
+      <h2 class="mt-6 text-sm font-semibold text-gray-500 uppercase mb-2">Analytics</h2>
+      <ul class="space-y-1 text-sm text-gray-700">
+        <li class="hover:text-blue-600 cursor-pointer">Show Me</li>
+        <li class="hover:text-blue-600 cursor-pointer">Trend Line</li>
+        <li class="hover:text-blue-600 cursor-pointer">Forecast</li>
+      </ul>
+    </section>
+
+    <!-- Center panel: Data Table -->
+    <section class="bg-white p-4 rounded-xl shadow overflow-auto">
+      <h2 class="text-xl font-semibold mb-4 text-gray-800">📋 Data Table</h2>
+      <table class="min-w-full text-sm text-left">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-2">Area</th>
+            <th class="px-4 py-2 text-right">2016-Q1</th>
+            <th class="px-4 py-2 text-right">2016-Q2</th>
+            <th class="px-4 py-2 text-right">2016-Q3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-t">
+            <td class="px-4 py-2">Alabama</td>
+            <td class="px-4 py-2 text-right">201,898</td>
+            <td class="px-4 py-2 text-right">204,140</td>
+            <td class="px-4 py-2 text-right">204,389</td>
+          </tr>
+          <!-- …more rows… -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Right panel: Filters -->
+    <section class="bg-white p-4 rounded-xl shadow overflow-auto">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase mb-2">Filters</h2>
+      <div class="space-y-4 text-sm text-gray-700">
+        <div>
+          <label class="block mb-1">State</label>
+          <select multiple class="w-full border-gray-300 rounded p-2">
+            <option>Alabama</option>
+            <option>Alaska</option>
+            <!-- … -->
+          </select>
+        </div>
+        <div>
+          <label class="block mb-1">Industry</label>
+          <div class="space-y-1">
+            <label class="flex items-center"><input type="checkbox" class="mr-2">Arts, entertain…</label>
+            <label class="flex items-center"><input type="checkbox" class="mr-2">Durable goods …</label>
+            <!-- … -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}
