@@ -2,78 +2,97 @@
 {% block title %}Dashboard – DataVizApp{% endblock %}
 
 {% block content %}
-  <div class="grid grid-cols-3 gap-6 h-full">
-    <!-- Left panel: Data & Analytics -->
-    <section class="bg-white p-4 rounded-xl shadow overflow-auto">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase mb-2">Data</h2>
-      <ul class="space-y-1 text-sm text-gray-700">
-        <li class="font-medium">Dimensions</li>
-        <ul class="pl-4 list-disc space-y-1">
-          <li>Area</li>
-          <li>Industry</li>
-          <li>…</li>
+<div class="min-h-screen bg-gray-50 py-8 px-4">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+    <!-- Left Panel: Data & Analytics -->
+    <aside class="bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-8">
+      <section>
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Data</h2>
+        <div class="mb-4">
+          <h3 class="font-semibold text-gray-700 mb-1">Dimensions</h3>
+          <ul class="pl-4 list-disc text-gray-600 space-y-1 text-sm">
+            <li>Area</li>
+            <li>Industry</li>
+            <li>...</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700 mb-1">Measures</h3>
+          <ul class="pl-4 list-disc text-gray-600 space-y-1 text-sm">
+            <li>2016:Q1</li>
+            <li>2016:Q2</li>
+            <li>...</li>
+          </ul>
+        </div>
+      </section>
+      <section>
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Analytics</h2>
+        <ul class="space-y-2">
+          <li class="transition hover:bg-blue-50 hover:text-blue-700 rounded px-2 py-1 cursor-pointer font-medium">Show Me</li>
+          <li class="transition hover:bg-blue-50 hover:text-blue-700 rounded px-2 py-1 cursor-pointer font-medium">Trend Line</li>
+          <li class="transition hover:bg-blue-50 hover:text-blue-700 rounded px-2 py-1 cursor-pointer font-medium">Forecast</li>
         </ul>
-        <li class="mt-4 font-medium">Measures</li>
-        <ul class="pl-4 list-disc space-y-1">
-          <li>2016:Q1</li>
-          <li>2016:Q2</li>
-          <li>…</li>
-        </ul>
-      </ul>
+      </section>
+    </aside>
 
-      <h2 class="mt-6 text-sm font-semibold text-gray-500 uppercase mb-2">Analytics</h2>
-      <ul class="space-y-1 text-sm text-gray-700">
-        <li class="hover:text-blue-600 cursor-pointer">Show Me</li>
-        <li class="hover:text-blue-600 cursor-pointer">Trend Line</li>
-        <li class="hover:text-blue-600 cursor-pointer">Forecast</li>
-      </ul>
-    </section>
-
-    <!-- Center panel: Data Table -->
-    <section class="bg-white p-4 rounded-xl shadow overflow-auto">
-      <h2 class="text-xl font-semibold mb-4 text-gray-800">📋 Data Table</h2>
-      <table class="min-w-full text-sm text-left">
-        <thead class="bg-gray-50">
+    <!-- Center Panel: Data Table -->
+    <main class="bg-white rounded-2xl shadow-lg p-6 overflow-x-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <span class="text-blue-500">📋</span> Data Table
+        </h2>
+        <button class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-blue-700 transition">Export</button>
+      </div>
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-100">
           <tr>
-            <th class="px-4 py-2">Area</th>
-            <th class="px-4 py-2 text-right">2016-Q1</th>
-            <th class="px-4 py-2 text-right">2016-Q2</th>
-            <th class="px-4 py-2 text-right">2016-Q3</th>
+            <th class="px-4 py-2 font-semibold text-gray-600 text-left">Area</th>
+            <th class="px-4 py-2 font-semibold text-gray-600 text-right">2016-Q1</th>
+            <th class="px-4 py-2 font-semibold text-gray-600 text-right">2016-Q2</th>
+            <th class="px-4 py-2 font-semibold text-gray-600 text-right">2016-Q3</th>
           </tr>
         </thead>
-        <tbody>
-          <tr class="border-t">
-            <td class="px-4 py-2">Alabama</td>
-            <td class="px-4 py-2 text-right">201,898</td>
-            <td class="px-4 py-2 text-right">204,140</td>
-            <td class="px-4 py-2 text-right">204,389</td>
+        <tbody class="divide-y divide-gray-100">
+          <tr>
+            <td class="px-4 py-2 text-gray-700">Alabama</td>
+            <td class="px-4 py-2 text-right text-gray-700">201,898</td>
+            <td class="px-4 py-2 text-right text-gray-700">204,140</td>
+            <td class="px-4 py-2 text-right text-gray-700">204,389</td>
           </tr>
-          <!-- …more rows… -->
+          <!-- ...more rows... -->
         </tbody>
       </table>
-    </section>
+    </main>
 
-    <!-- Right panel: Filters -->
-    <section class="bg-white p-4 rounded-xl shadow overflow-auto">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase mb-2">Filters</h2>
-      <div class="space-y-4 text-sm text-gray-700">
-        <div>
-          <label class="block mb-1">State</label>
-          <select multiple class="w-full border-gray-300 rounded p-2">
+    <!-- Right Panel: Filters -->
+    <aside class="bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-8">
+      <section>
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Filters</h2>
+        <div class="mb-5">
+          <label class="block text-gray-700 font-medium mb-2">State</label>
+          <select multiple class="w-full border border-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700">
             <option>Alabama</option>
             <option>Alaska</option>
-            <!-- … -->
+            <!-- ... -->
           </select>
         </div>
         <div>
-          <label class="block mb-1">Industry</label>
-          <div class="space-y-1">
-            <label class="flex items-center"><input type="checkbox" class="mr-2">Arts, entertain…</label>
-            <label class="flex items-center"><input type="checkbox" class="mr-2">Durable goods …</label>
-            <!-- … -->
+          <label class="block text-gray-700 font-medium mb-2">Industry</label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" class="accent-blue-600 rounded" />
+              <span>Arts, entertain…</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" class="accent-blue-600 rounded" />
+              <span>Durable goods …</span>
+            </label>
+            <!-- ... -->
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+      <button class="mt-6 bg-blue-600 text-white w-full py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition">Apply Filters</button>
+    </aside>
   </div>
+</div>
 {% endblock %}
