@@ -1,11 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Login</title>
-  <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
-</head>
-<body class="bg-gradient-to-br from-white to-blue-100 min-h-screen flex items-center justify-center">
+{% extends "base.html" %}
+{% block title %}Log In – DataVizApp{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50">
   <div class="bg-white shadow-xl rounded-2xl p-10 max-w-md w-full">
     <h2 class="text-3xl font-bold mb-6 text-center text-blue-700">Log In</h2>
     
@@ -24,7 +21,7 @@
 
       <button type="submit"
         class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
-        Sign In
+        Log In
       </button>
     </form>
 
@@ -33,5 +30,5 @@
       <a href="/signup" class="text-blue-600 hover:underline">Sign up</a>
     </p>
   </div>
-</body>
-</html>
+</div>
+{% endblock %}
