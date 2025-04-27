@@ -1,9 +1,28 @@
-# general python files to ignore
-__pycache__
-
-# things we don't want to upload to GitHub
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 venv/
-app/static/*.png
 
-# leave coverage to the individual client
+# Flask environment files
+instance/
+.env
+
+# Test coverage files
 .coverage
+
+# Static files
+static/*.png
+static/css/output.css
+
+# Node.js (Tailwind)
+node_modules/
+package-lock.json
+
+# VS Code config
+.vscode/
+
+# OS system junk
+.DS_Store
+Thumbs.db
