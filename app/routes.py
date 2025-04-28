@@ -1,5 +1,5 @@
 from app import app
-from flask import render_template
+from flask import render_template, request, redirect
 
 @app.route('/')
 def index():
@@ -13,6 +13,21 @@ def login():
 def dashboard():
     return render_template("dashboard.html")
 
+@app.route('/profile')
+def profile():
+    return render_template("profile.html")
+
+@app.route('/edit-profile', methods=['GET', 'POST'])
+def edit_profile():
+    if request.method == 'POST':
+        # Handle form submission (e.g., save updated profile data)
+        name = request.form.get('name')
+        email = request.form.get('email')
+        # Save the data (this is just a placeholder, implement actual logic)
+        print(f"Updated Name: {name}, Updated Email: {email}")
+        return redirect('/profile')  # Redirect back to the profile page after saving
+
+    return render_template("edit_profile.html")
 # ------------------------------------------------------------------
 # TODO: Move this to a forms.py file if we end up with more forms
 
@@ -80,7 +95,7 @@ def upload():
 
 # ------------------------------------------------------------------
 
-import plots
+from app import plots
 from flask import send_file, request
 
 # plot endpoints
