@@ -80,7 +80,7 @@ def upload():
 
 # ------------------------------------------------------------------
 
-import plots
+from app import plots
 from flask import send_file, request
 
 # plot endpoints
