@@ -13,22 +13,6 @@ def login():
 def dashboard():
     return render_template("dashboard.html")
 
-@app.route('/friends', methods=['GET'])
-def friends():
-    return render_template("friends.html")
-
-@app.route('/add-friend', methods=['GET', 'POST'])
-def add_friend():
-    if request.method == 'POST':
-        # Handle form submission (e.g., save friend data)
-        friend_name = request.form.get('friend_name')
-        friend_email = request.form.get('friend_email')
-        # Save the data (this is just a placeholder, implement actual logic)
-        print(f"Added Friend: {friend_name}, Email: {friend_email}")
-        return redirect('/friends')  # Redirect back to the friends page after saving
-
-    return render_template("add_friend.html")
-
 # ------------------------------------------------------------------
 # TODO: Move this to a forms.py file if we end up with more forms
 
