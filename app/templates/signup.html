@@ -1,0 +1,47 @@
+{% extends "minimal_base.html" %}
+{% block title %}Sign Up – DataVizApp{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow-xl rounded-2xl p-10 max-w-md w-full">
+    <h2 class="text-3xl font-bold mb-6 text-center text-blue-700">Create an Account</h2>
+    <p class="text-sm text-gray-600 text-center mb-8">
+        Join DataVizApp and start turning your data into insights.
+    </p>
+    
+    <form method="POST" class="space-y-5">
+        <div>
+            <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+            <input type="text" id="name" name="name" required
+                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+            <input type="email" id="email" name="email" required
+                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+        
+        <div>
+            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+            <input type="password" id="password" name="password" required
+                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <div>
+            <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+            <input type="password" id="confirm-password" name="confirm-password" required
+                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <button type="submit"
+            class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+            Sign Up
+        </button>
+    </form>
+
+    <p class="text-sm text-gray-600 mt-6 text-center">
+        Already have an account?
+        <a href="/login" class="text-blue-600 hover:underline">Log in</a>
+    </p>
+</div>
+{% endblock %}
