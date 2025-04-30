@@ -1,6 +1,11 @@
 from app import app
 from flask import render_template, request, redirect
 
+@app.route('/logout')
+def logout():
+    # Logic to log out the user (e.g., clearing session data)
+    return redirect('/login')
+
 @app.route('/')
 def index():
     return render_template("index.html")
@@ -17,29 +22,29 @@ def dashboard():
 def signup():
     return render_template("signup.html")
 
-# ------------------------------------------------------------------
-# TODO: Move this to a forms.py file if we end up with more forms
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    return render_template('settings.html')
 
-from flask_wtf import FlaskForm
-from flask_wtf.file import FileField
+@app.route('/friends', methods=['GET'])
+def friends():
+    return render_template('friends.html')
 
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired
+@app.route('/analytics')
+def analytics():
+    return render_template('analytics.html')
 
-import pandas
-import io
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
 
-import matplotlib
-matplotlib.use('Agg')
+@app.route('/edit-profile', methods=['PATCH'])
+def edit_profile():
+    return render_template('edit_profile.html')
 
-import matplotlib.pyplot
-
-import os
-
-
-class UploadForm(FlaskForm):
-    file = FileField('Select a File', validators=[ DataRequired() ])
-    submit = SubmitField('Submit')
+@app.route('/add-friend', methods=['GET', 'POST'])
+def add_friend():
+    return render_template('add_friend.html')
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
@@ -81,6 +86,54 @@ def upload():
             path_chart = 'chart.png'
 
     return render_template('upload.html', form=form, chart=path_chart)
+
+
+@app.route('/visualise', methods=['GET', 'POST'])
+def visualise():
+    chart = None
+    if request.method == 'GET':
+        # Handle visualization logic here
+        x_col = request.args.get('xCol')
+        y_col = request.args.get('yCol')
+        chart_type = request.args.get('chartType')
+        title = request.args.get('title', 'Visualization')
+        color = request.args.get('color', 'blue')
+        grid = request.args.get('grid', '1') == '1'
+        figsize = tuple(map(int, request.args.get('figsize', '10,6').split(',')))
+
+        # Generate the chart using your existing plotting functions
+        if x_col and y_col and chart_type:
+            if chart_type == 'line':
+                chart = plots.plot_line(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
+            elif chart_type == 'bar':
+                chart = plots.plot_bar(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
+            # Add other chart types here...
+
+    return render_template('visualise.html', chart=chart)
+
+# ------------------------------------------------------------------
+# TODO: Move this to a forms.py file if we end up with more forms
+
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField
+
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired
+
+import pandas
+import io
+
+import matplotlib
+matplotlib.use('Agg')
+
+import matplotlib.pyplot
+
+import os
+
+
+class UploadForm(FlaskForm):
+    file = FileField('Select a File', validators=[ DataRequired() ])
+    submit = SubmitField('Submit')
 
 # ------------------------------------------------------------------
 
@@ -170,7 +223,7 @@ def plotArea():
     title = request.args.get('title', default= 'Area Plot') 
     color = request.args.get('color', default= 'blue')
     xlabel = request.args.get('xlabel')
-    ylabel = request.args.get('ylabel')
+    ylabel = request.args.get('yCol')
     fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
     fig = (int(fig[0]), int(fig[1]))
     grid = request.args.get('grid', type= int)
