@@ -1,5 +1,5 @@
 from app import app
-from flask import render_template
+from flask import Response, render_template
 
 @app.route('/')
 def index():
@@ -12,6 +12,56 @@ def login():
 @app.route('/dashboard')
 def dashboard():
     return render_template("dashboard.html")
+
+# ------------------------------------------------------------------
+# Source endpoints
+
+@app.route('/sources', methods=['GET'])
+def get_available_sources() -> Response:
+    ...
+
+@app.route('/sources', methods=['POST'])
+def make_new_source() -> Response:
+    ...
+
+@app.route('/sources/<file_id:int>', methods=['GET'])
+def get_source(file_id: int) -> Response:
+    ...
+
+@app.route('/sources/<file_id:int>', methods=['PUT'])
+def update_source(file_id: int) -> Response:
+    ...
+
+@app.route('/sources/<file_id:int>', methods=['DELETE'])
+def delete_source(file_id: int) -> Response:
+    ...
+
+# ------------------------------------------------------------------
+# Chart endpoints
+
+@app.route('/charts', methods=['GET'])
+def get_available_charts() -> Response:
+    ...
+
+@app.route('/charts', methods=['POST'])
+def make_new_chart() -> Response:
+    ...
+
+@app.route('/charts/<chart_id:int>', methods=['GET'])
+def get_chart(chart_id: int) -> Response:
+    ...
+
+@app.route('/charts/<chart_id:int>', methods=['PUT'])
+def update_chart(chart_id: int) -> Response:
+    ...
+
+@app.route('/charts/<chart_id:int>', methods=['DELETE'])
+def delete_chart(chart_id: int) -> Response:
+    ...
+
+@app.route('/chart/<chart_id:int>/view', methods=['GET'])
+def get_chart_view(chart_id: int) -> Response:
+    ...
 
 # ------------------------------------------------------------------
 # TODO: Move this to a forms.py file if we end up with more forms
