@@ -1,5 +1,25 @@
 from app import app
-from flask import render_template, request, redirect
+from flask import render_template, request, redirect, url_for, flash, session
+
+import hashlib
+import os
+import base64
+import sqlite3
+
+
+# Using hash password
+def hash_password(password: str) -> str:
+    salt = os.urandom(16)
+    hashed = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
+    return base64.b64encode(salt + hashed).decode()
+
+# To verify password
+def verify_password(password: str, stored: str) -> bool:
+    data = base64.b64decode(stored.encode())
+    salt = data[:16]
+    stored_hash = data[16:]
+    new_hash = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
+    return new_hash == stored_hash
 
 @app.route('/logout')
 def logout():
@@ -12,7 +32,25 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+
+        conn = sqlite3.connect('app/users.db')
+        cur = conn.cursor()
+        cur.execute("SELECT password FROM users WHERE email = ?", (email,))
+        result = cur.fetchone()
+        conn.close()
+
+        if result and verify_password(password, result[0]):
+            session['user_email'] = email
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid email or password.')
+            return redirect(url_for('login'))
+
     return render_template("login.html")
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -20,6 +58,33 @@ def dashboard():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
+    if request.method == 'POST':
+        fullname = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+        confirm = request.form['confirm-password']
+
+        if password != confirm:
+            flash("Passwords do not match.")
+            return redirect(url_for('signup'))
+
+        hashed = hash_password(password)
+
+        conn = sqlite3.connect('app/users.db')
+        cur = conn.cursor()
+
+        cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+        if cur.fetchone():
+            flash("Email already exists.")
+            return redirect(url_for('login'))
+
+        cur.execute("INSERT INTO users (fullname, email, password) VALUES (?, ?, ?)", (fullname, email, hashed))
+        conn.commit()
+        conn.close()
+
+        flash("Signup successful!")
+        return redirect(url_for('login'))
+
     return render_template("signup.html")
 
 @app.route('/settings', methods=['GET', 'POST'])

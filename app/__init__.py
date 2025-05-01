@@ -1,4 +1,6 @@
 from flask import Flask
+from flask_wtf.csrf import generate_csrf
+from flask_wtf.csrf import CSRFProtect
 
 # Tell Flask where to find the static folder
 app = Flask(
@@ -7,10 +9,12 @@ app = Flask(
     template_folder='templates'
 )
 
-# TODO: Make this not absolutely suck
 app.secret_key = 'very-secret'
 
-from app import routes
+csrf = CSRFProtect(app)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf_token=generate_csrf())
+
+from app import routes
