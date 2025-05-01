@@ -1,5 +1,6 @@
+from werkzeug.wrappers import response
 from app import app
-from flask import Response, render_template
+from flask import Response, render_template, jsonify
 
 @app.route('/')
 def index():
@@ -18,50 +19,79 @@ def dashboard():
 
 @app.route('/sources', methods=['GET'])
 def get_available_sources() -> Response:
-    ...
+    response = jsonify({
+        'sources': [{'name': 'File Name 1', 'file_id': 10},
+                    {'name': 'File Name 2', 'file_id': 11}]
+    })
+
+    response.status_code = 200
+    return response
 
 @app.route('/sources', methods=['POST'])
 def make_new_source() -> Response:
-    ...
+    response = jsonify({'file_id': 12})
+    response.status_code = 201
+    return response
 
 @app.route('/sources/<file_id:int>', methods=['GET'])
 def get_source(file_id: int) -> Response:
-    ...
+    response = jsonify({'file_id': file_id, 'content': 'h1,h2,h3\n1,2,3'})
+    response.status_code = 200
+    return response
 
 @app.route('/sources/<file_id:int>', methods=['PUT'])
 def update_source(file_id: int) -> Response:
-    ...
+    response = jsonify({'file_id': file_id})
+    response.status_code = 200
+    return response
 
 @app.route('/sources/<file_id:int>', methods=['DELETE'])
 def delete_source(file_id: int) -> Response:
-    ...
+    response = jsonify({'message': 'File deleted successfully'})
+    response.status_code = 200
+    return response
 
 # ------------------------------------------------------------------
 # Chart endpoints
 
 @app.route('/charts', methods=['GET'])
 def get_available_charts() -> Response:
-    ...
+    response = jsonify({
+        'charts': [{'name': 'Chart 1', 'chart_id': 10},
+                   {'name': 'Chart 2', 'chart_id': 11}]
+    })
+    response.status_code = 200
+    return response
 
 @app.route('/charts', methods=['POST'])
 def make_new_chart() -> Response:
-    ...
+    response = jsonify({'chart_id': 12})
+    response.status_code = 201
+    return response
 
 @app.route('/charts/<chart_id:int>', methods=['GET'])
 def get_chart(chart_id: int) -> Response:
-    ...
+    response = jsonify({'chart_id': chart_id, 'file_id': 11, 'spec': 'type=line'})
+    response.status_code = 200
+    return response
 
 @app.route('/charts/<chart_id:int>', methods=['PUT'])
 def update_chart(chart_id: int) -> Response:
-    ...
+    response = jsonify({'chart_id': chart_id})
+    response.status_code = 200
+    return response
 
 @app.route('/charts/<chart_id:int>', methods=['DELETE'])
 def delete_chart(chart_id: int) -> Response:
-    ...
+    response = jsonify({'message': 'Chart deleted successfully.'})
+    response.status_code = 200
+    return response
 
 @app.route('/chart/<chart_id:int>/view', methods=['GET'])
 def get_chart_view(chart_id: int) -> Response:
-    ...
+    response = jsonify({'name': 'Chart Name', 'chart_id': chart_id, 'content': 'chart.png'})
+    response.status_code = 200
+    return response
 
 # ------------------------------------------------------------------
 # TODO: Move this to a forms.py file if we end up with more forms
