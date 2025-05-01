@@ -18,6 +18,9 @@ app/users.db
 # Test coverage files
 .coverage
 
+# Generate files
+dataFrame.csv
+
 # Static files
 static/*.png
 static/css/output.css
