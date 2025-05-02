@@ -17,6 +17,10 @@ def login():
 def dashboard():
     return render_template("dashboard.html")
 
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    return render_template("signup.html")
+
 # ------------------------------------------------------------------
 
 from app.logic.specifier import Parser
