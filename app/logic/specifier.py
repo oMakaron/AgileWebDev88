@@ -43,7 +43,6 @@ class Token:
         return Token('value', value, pos)
 
 
-
 class Tokenizer:
 
     def __init__(self, source: str) -> None:
@@ -52,7 +51,7 @@ class Tokenizer:
         self._has_more = True
 
         self._punctuation = {',', '=', '[', ']'}
-        self._alpha = set('abcdefghijklmnopqrstuvwxyz')
+        self._alpha = set('abcdefghijklmnopqrstuvwxyz_')
         self._alpha_num = self._alpha | set('0123456789')
 
 
@@ -115,12 +114,19 @@ class Tokenizer:
 class ParseError(Exception):
 
     def __init__(self, source: str, pos: int, message: str) -> None:
-        desc = f"[Parse Error]:"
+        header = 'Parse Error:'
         outline = f"{' ' * pos}^{'~' * (len(source) - pos)}~ {message}"
-        super().__init__('\n'.join((desc, source, outline)))
+        super().__init__('\n'.join((header, source, outline)))
+
+
 
 
 class Parser:
+
+    @staticmethod
+    def parse_string(source: str) -> dict[str, str | list[str]]:
+        tokens = Tokenizer(source)
+        return Parser(tokens).parse()
 
     def __init__(self, tokens: Tokenizer) -> None:
         self._tokens = tokens
@@ -197,33 +203,4 @@ class Parser:
         name = self._expect('name', 'expected a name.')
         self._advance()
         return name
-
-
-class Specifier:
-    dimensions: tuple[int, int]
-    x: str | list[str] | None
-    y: str | list[str] | None
-
-    def __init__(self) -> None:
-        self.x, self.y = None, None
-        self.dimensions = (10, 8)
-
-    def set_x(self, x: str | list[str]) -> Specifier:
-        self.x = x
-        return self
-
-    def set_y(self, y: str | list[str]) -> Specifier:
-        self.y = y
-        return self
-
-    @staticmethod
-    def from_string(format: str) -> Specifier:
-
-        tokens = Tokenizer(format)
-        spec = Parser(tokens).parse()
-
-        if not 'x' in spec or not 'y' in spec:
-            raise ValueError("Graph needs both x and y axes to be plotted.")
-
-        return Specifier().set_x(spec['x']).set_y(spec['y'])
 
