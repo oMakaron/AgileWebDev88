@@ -119,8 +119,6 @@ class ParseError(Exception):
         super().__init__('\n'.join((header, source, outline)))
 
 
-
-
 class Parser:
 
     @staticmethod
