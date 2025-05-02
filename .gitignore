@@ -9,6 +9,9 @@ venv/
 instance/
 .env
 
+# Test coverage files
+.coverage
+
 # Static files
 static/*.png
 static/css/output.css
