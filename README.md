@@ -42,11 +42,14 @@ The `output.css` file is ignored in the repository and must be generated locally
    This will create the `output.css` file in the `static/css` directory.
 
 ### 4.5. Initialising the Database
-To create the users table required for login/signup, run the following command once:
+
+We use **Flask-SQLAlchemy** to manage the database.
+
+To create the required tables, run the following once:
+
 ```bash
-python app/user_db.py
+python init_database.py
 ```
-This will generate app/users.db
 
 ### 5. Running the Application
 ```bash

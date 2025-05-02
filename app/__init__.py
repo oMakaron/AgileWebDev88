@@ -1,6 +1,11 @@
 from flask import Flask
-from flask_wtf.csrf import generate_csrf
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import generate_csrf, CSRFProtect
+from flask_sqlalchemy import SQLAlchemy
+import os
+from app.model import db
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
 
 # Tell Flask where to find the static folder
 app = Flask(
@@ -11,10 +16,11 @@ app = Flask(
 
 app.secret_key = 'very-secret'
 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'users.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app) 
 csrf = CSRFProtect(app)
 
-@app.context_processor
-def inject_csrf_token():
-    return dict(csrf_token=generate_csrf())
+from app import routes, model
 
-from app import routes

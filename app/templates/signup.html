@@ -26,85 +26,45 @@
 
     
     <form method="POST" class="space-y-5">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {{ form.hidden_tag() }}
+
         <div>
-            <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
-            <input type="text" id="name" name="name" required
-                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+            {{ form.name.label(class="block text-sm font-medium text-gray-700") }}
+            {{ form.name(class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400") }}
         </div>
 
         <div>
-            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-            <input type="email" id="email" name="email" required
-                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+            {{ form.email.label(class="block text-sm font-medium text-gray-700") }}
+            {{ form.email(class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400") }}
+        </div>
+
+        <div>
+            {{ form.password.label(class="block text-sm font-medium text-gray-700") }}
+            {{ form.password(
+                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400",
+                minlength=False
+            ) }}
+            {% for error in form.password.errors %}
+              <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+            {% endfor %}
         </div>
         
+        
         <div>
-            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" id="password" name="password" required
-                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+            {{ form.confirm.label(class="block text-sm font-medium text-gray-700") }}
+            {{ form.confirm(class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400") }}
+            {% for error in form.confirm.errors %}
+              <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+            {% endfor %}
         </div>
+        
 
-        <div>
-            <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
-            <input type="password" id="confirm-password" name="confirm-password" required
-                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-        </div>
-
-        <button type="submit"
-            class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-            Sign Up
-        </button>
+        {{ form.submit(class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition") }}
     </form>
 
     <p class="text-sm text-gray-600 mt-6 text-center">
         Already have an account?
         <a href="/login" class="text-blue-600 hover:underline">Log in</a>
     </p>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const form = document.querySelector('form');
-            const passwordInput = document.getElementById('password');
-            const confirmInput = document.getElementById('confirm-password');
-        
-            form.addEventListener('submit', function (event) {
-                const password = passwordInput.value.trim();
-                const confirm = confirmInput.value.trim();
-        
-                // delete All wrong information
-                document.querySelectorAll('.error-message').forEach(e => e.remove());
-        
-                function showError(message) {
-                    const p = document.createElement('p');
-                    p.textContent = message;
-                    p.className = 'error-message text-red-500 text-sm mt-1';
-                    form.insertBefore(p, form.querySelector('button'));
-                }
-        
-                let hasError = false;
-        
-                // checking length
-                if (password.length < 8) {
-                    showError('Password must be at least 8 characters long.');
-                    hasError = true;
-                }
-        
-                // checking passwords and confirm password
-                if (password !== confirm) {
-                    showError('Passwords do not match.');
-                    hasError = true;
-                }
-        
-                // delete passwords
-                if (hasError) {
-                    passwordInput.value = '';
-                    confirmInput.value = '';
-                    event.preventDefault();
-                }
-            });
-        });
-        </script>        
-
 </div>
 {% endblock %}
