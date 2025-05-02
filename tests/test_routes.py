@@ -27,16 +27,16 @@ class Test(TestCase):
         result = self.client.get('/login')
         self.assertEqual(200, result.status_code)
 
-#    def test_upload(self) -> None:
-#        data = make_csv(
-#            'test.csv', [
-#                ['Header1', 'Header2', 'Header3'],
-#                ['Body1',   'Body2',   '3'],
-#                ['Body4',   'Body5',   '6'],
-#            ])
-#
-#        response = self.client.post('/upload', data=data, content_type='multipart/form-data')
-#
-#        self.assertEqual(200, response.status_code)
-#        self.assertIn(b"<img src=", response.data)
+    def test_upload(self) -> None:
+        data = {
+            'file': make_csv( 'test.csv', [ ['Header1', 'Header2', 'Header3'],
+                                            ['Body1',   'Body2',   '3'],
+                                            ['Body4',   'Body5',   '6'], ]),
+            'spec': "type = bar, x_col = Header1, y_col = Header3"
+        }
+
+        response = self.client.post('/upload', data=data, content_type='multipart/form-data')
+
+        self.assertEqual(200, response.status_code)
+        self.assertIn(b"<img src=", response.data)
 

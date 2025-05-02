@@ -2,7 +2,6 @@
 import pandas as pd
 
 # does the graphing
-import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
 # useful for constructing file-like objects

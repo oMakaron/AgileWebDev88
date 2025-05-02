@@ -18,16 +18,12 @@ def dashboard():
     return render_template("dashboard.html")
 
 # ------------------------------------------------------------------
-# TODO: Move this to a forms.py file if we end up with more forms
-
-import matplotlib
-matplotlib.use('Agg')
-
-import matplotlib.pyplot
 
 from app.logic.specifier import Parser
 from app.logic.plotter import read_csv, save_to_string
 from app.plots import registry
+
+from matplotlib.pyplot import close
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -50,14 +46,18 @@ def upload():
 
         plotter = registry.functions[plot_type]
 
+        # TODO: Catch errors and report the message to the user
         bound, unbound = plotter.bind_args(source = data, **spec)
-        print(bound)
+
         if unbound:
+            # TODO: Flash these messages to the user so that they can understand why their
+            # option isn't doing anything. Maybe make `unbound` also offer near matches?
             print(unbound)
 
         # generates a base64 encoding of a png so that we don't have to save locally
         figure = plotter.function(**bound)
         image = save_to_string(figure)
+        close(figure)
 
         # this boilerplate is necessary to get the browser to interpret the string as a png
         chart = f"data:image/png;base64,{image}"
