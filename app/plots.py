@@ -89,7 +89,14 @@ class PlotRegistry:
         return register
 
 
-registry = PlotRegistry()
+registry = PlotRegistry(remaps={
+    # makes it so that match 'true' are true and everythin else is false
+    bool: lambda string: string.lower() == 'true',
+
+    # TODO: Allow tuples in the parser, or at the very least allow values to start with numbers so
+    # the `_` prefix is not necesary
+    tuple[int, int]: lambda string: tuple(int(val.removeprefix('_')) for val in string.split('x')),
+})
 
 
 @registry.register_as('line')
