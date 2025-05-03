@@ -40,15 +40,11 @@
 
         <div>
             {{ form.password.label(class="block text-sm font-medium text-gray-700") }}
-            {{ form.password(
-                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400",
-                minlength=False
-            ) }}
+            {{ form.password(class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400") }}
             {% for error in form.password.errors %}
               <p class="text-red-500 text-sm mt-1">{{ error }}</p>
             {% endfor %}
         </div>
-        
         
         <div>
             {{ form.confirm.label(class="block text-sm font-medium text-gray-700") }}
