@@ -17,9 +17,9 @@ def dashboard():
 def profile():
     return render_template("profile.html")
 
-@app.route('/edit-profile', methods=['GET', 'POST'])
+@app.route('/edit-profile', methods=['GET', 'PATCH'])
 def edit_profile():
-    if request.method == 'POST':
+    if request.method == 'PATCH':
         # Handle form submission (e.g., save updated profile data)
         name = request.form.get('name')
         email = request.form.get('email')
@@ -28,6 +28,11 @@ def edit_profile():
         return redirect('/profile')  # Redirect back to the profile page after saving
 
     return render_template("edit_profile.html")
+  
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    return render_template("signup.html")
+
 # ------------------------------------------------------------------
 # TODO: Move this to a forms.py file if we end up with more forms
 
