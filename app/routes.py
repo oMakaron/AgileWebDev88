@@ -1,4 +1,5 @@
 from app import app
+
 from flask import render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.model import User
@@ -38,6 +39,23 @@ def login():
 @app.route('/dashboard')
 def dashboard():
     return render_template("dashboard.html")
+  
+@app.route('/profile')
+def profile():
+    return render_template("profile.html")
+
+@app.route('/edit-profile', methods=['GET', 'PATCH'])
+def edit_profile():
+    if request.method == 'PATCH':
+        # Handle form submission (e.g., save updated profile data)
+        name = request.form.get('name')
+        email = request.form.get('email')
+        # Save the data (this is just a placeholder, implement actual logic)
+        print(f"Updated Name: {name}, Updated Email: {email}")
+        return redirect('/profile')  # Redirect back to the profile page after saving
+
+    return render_template("edit_profile.html")
+
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -46,7 +64,6 @@ def signup():
         fullname = form.name.data
         email = form.email.data
         password = form.password.data
-
         hashed = generate_password_hash(password)
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
@@ -265,7 +282,7 @@ def plotArea():
     title = request.args.get('title', default= 'Area Plot') 
     color = request.args.get('color', default= 'blue')
     xlabel = request.args.get('xlabel')
-    ylabel = request.args.get('yCol')
+    ylabel = request.args.get('ylabel')
     fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
     fig = (int(fig[0]), int(fig[1]))
     grid = request.args.get('grid', type= int)
