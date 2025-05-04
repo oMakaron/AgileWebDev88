@@ -6,13 +6,19 @@
   <title>{% block title %}DataVizApp{% endblock %}</title>
   <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
 </head>
-<body class="flex h-screen bg-gray-100 overflow-hidden">
+<body class="h-screen overflow-hidden">
 
   <!-- Sidebar -->
-  <aside class="w-64 bg-gray-900 text-white p-6 flex-shrink-0">
+  <aside
+    id="sidebar"
+    class="fixed inset-y-0 left-0 w-64 bg-gray-900 text-white p-6
+           transform translate-x-0
+           transition-transform duration-300 ease-in-out
+           z-20"
+  >
     <h1 class="text-2xl font-bold mb-8">DataVizApp</h1>
     <nav class="space-y-4 text-lg">
-      <a href="/"          class="block hover:text-blue-400">Home</a>
+      <a href="/dashboard" class="block hover:text-blue-400">Home</a>
       <a href="/upload"    class="block hover:text-blue-400">Upload</a>
       <a href="/visualise" class="block hover:text-blue-400">Visualise</a>
       <a href="/friends"   class="block hover:text-blue-400">Share</a>
@@ -20,26 +26,115 @@
     </nav>
   </aside>
 
-  <!-- Main section -->
-  <div class="flex-1 flex flex-col overflow-hidden">
-    <!-- Top Toolbar -->
-    <header class="flex items-center bg-white shadow px-6 h-14 flex-shrink-0">
-      <nav class="space-x-6 text-sm text-gray-600">
-        <a href="/"          class="hover:text-gray-900">Home</a>
-        <a href="/upload"    class="hover:text-gray-900">Upload</a>
-        <a href="/visualise" class="hover:text-gray-900">Visualise</a>
-        <a href="/friends"   class="hover:text-gray-900">Share</a>
+  <!-- Toggle pill -->
+  <button
+    id="toggleSidebar"
+    class="fixed top-1/2 left-64 transform -translate-y-1/2
+           bg-gray-800 text-white rounded-r-full p-2 shadow
+           hover:bg-gray-700 focus:outline-none
+           transition-all duration-300 ease-in-out
+           z-30"
+  >⮜</button>
+
+  <!-- Main content -->
+  <div
+    id="mainContent"
+    class="ml-64 transition-all duration-300 ease-in-out
+           h-full overflow-auto bg-gray-100"
+  >
+    <header class="flex items-center bg-gray-100 text-gray-900 px-6 h-14 shadow">
+      <!-- App Name -->
+      <h1 class="text-xl font-bold">DataVizApp</h1>
+
+      <!-- Navigation Links -->
+      <nav class="ml-8 flex space-x-6 text-sm">
+        <a href="/dashboard" class="hover:text-blue-600">Dashboard</a>
+        <a href="/analytics" class="hover:text-blue-600">Analytics</a>
+        <a href="/settings" class="hover:text-blue-600">Settings</a>
       </nav>
-      <div class="ml-auto flex items-center space-x-4">
-        <button class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Connect Data</button>
-        <button class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Show Me</button>
+
+      <!-- Action Buttons -->
+      <div class="ml-auto flex items-center space-x-4 relative">
+        <!-- Notifications Button -->
+        <div class="relative">
+          <button id="notificationsBtn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 flex items-center space-x-2">
+            <span>Notifications</span>
+            <svg id="notificationsArrow" class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path id="arrowPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <!-- Dropdown -->
+          <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-300 rounded shadow-lg">
+            <ul class="divide-y divide-gray-200">
+              <li class="p-4 text-sm">New comment on your post</li>
+              <li class="p-4 text-sm">Your report is ready</li>
+              <li class="p-4 text-sm">System update available</li>
+            </ul>
+            <button class="w-full text-center py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium">
+              Read All
+            </button>
+          </div>
+        </div>
+
+        <!-- Logout Button -->
+        <button onclick="location.href='/logout'" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Logout
+        </button>
       </div>
     </header>
-
-    <!-- Page content -->
-    <main class="flex-1 p-6 overflow-auto">
+    <main class="p-6">
       {% block content %}{% endblock %}
     </main>
   </div>
+
+  <script>
+    const sidebar     = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    const toggleBtn   = document.getElementById('toggleSidebar');
+
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = sidebar.classList.contains('translate-x-0');
+
+      if (isOpen) {
+        // slide it out
+        sidebar.classList.replace('translate-x-0', '-translate-x-full');
+        mainContent.classList.replace('ml-64', 'ml-0');
+        toggleBtn.classList.replace('left-64', 'left-0');
+        toggleBtn.innerHTML = '⮞';
+      } else {
+        // slide it back
+        sidebar.classList.replace('-translate-x-full', 'translate-x-0');
+        mainContent.classList.replace('ml-0', 'ml-64');
+        toggleBtn.classList.replace('left-0', 'left-64');
+        toggleBtn.innerHTML = '⮜';
+      }
+    });
+
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    const notificationsDropdown = document.getElementById('notificationsDropdown');
+    const notificationsArrow = document.getElementById('notificationsArrow');
+    const arrowPath = document.getElementById('arrowPath');
+
+    // Toggle dropdown visibility and arrow direction
+    notificationsBtn.addEventListener('click', () => {
+      notificationsDropdown.classList.toggle('hidden');
+      if (notificationsDropdown.classList.contains('hidden')) {
+        // Arrow points down
+        arrowPath.setAttribute('d', 'M19 9l-7 7-7-7');
+      } else {
+        // Arrow points up
+        arrowPath.setAttribute('d', 'M19 15l-7-7-7 7');
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (event) => {
+      if (!notificationsBtn.contains(event.target) && !notificationsDropdown.contains(event.target)) {
+        notificationsDropdown.classList.add('hidden');
+        // Reset arrow to point down
+        arrowPath.setAttribute('d', 'M19 9l-7 7-7-7');
+      }
+    });
+  </script>
 </body>
 </html>

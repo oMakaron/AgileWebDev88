@@ -1,5 +1,17 @@
 from app import app
-from flask import render_template, request, redirect
+from flask import render_template, request, redirect, url_for, flash, session
+from werkzeug.security import generate_password_hash, check_password_hash
+from app.model import User
+from app.model import db
+from app.form import SignupForm, LoginForm
+
+
+
+
+@app.route('/logout')
+def logout():
+    # Logic to log out the user (e.g., clearing session data)
+    return redirect('/login')
 
 @app.route('/')
 def index():
@@ -7,12 +19,26 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template("login.html")
+    form = LoginForm()
+    if form.validate_on_submit():
+        email = form.email.data
+        password = form.password.data
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password, password):
+            session['user_email'] = email
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid email or password.')
+            return redirect(url_for('login'))
+
+    return render_template("login.html", form=form)
+
+
 
 @app.route('/dashboard')
 def dashboard():
     return render_template("dashboard.html")
-
+  
 @app.route('/profile')
 def profile():
     return render_template("profile.html")
@@ -28,34 +54,55 @@ def edit_profile():
         return redirect('/profile')  # Redirect back to the profile page after saving
 
     return render_template("edit_profile.html")
-  
+
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    return render_template("signup.html")
+    form = SignupForm()
+    if form.validate_on_submit():
+        fullname = form.name.data
+        email = form.email.data
+        password = form.password.data
+        hashed = generate_password_hash(password)
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Email already exists.")
+            return redirect(url_for('login'))
 
-# ------------------------------------------------------------------
-# TODO: Move this to a forms.py file if we end up with more forms
+        new_user = User(fullname=fullname, email=email, password=hashed)
+        db.session.add(new_user)
+        db.session.commit()
 
-from flask_wtf import FlaskForm
-from flask_wtf.file import FileField
+        flash("Signup successful!")
+        return redirect(url_for('login'))
 
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired
-
-import pandas
-import io
-
-import matplotlib
-matplotlib.use('Agg')
-
-import matplotlib.pyplot
-
-import os
+    return render_template("signup.html", form=form)
 
 
-class UploadForm(FlaskForm):
-    file = FileField('Select a File', validators=[ DataRequired() ])
-    submit = SubmitField('Submit')
+
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    return render_template('settings.html')
+
+@app.route('/friends', methods=['GET'])
+def friends():
+    return render_template('friends.html')
+
+@app.route('/analytics')
+def analytics():
+    return render_template('analytics.html')
+
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
+
+@app.route('/edit-profile', methods=['PATCH'])
+def edit_profile():
+    return render_template('edit_profile.html')
+
+@app.route('/add-friend', methods=['GET', 'POST'])
+def add_friend():
+    return render_template('add_friend.html')
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
@@ -97,6 +144,54 @@ def upload():
             path_chart = 'chart.png'
 
     return render_template('upload.html', form=form, chart=path_chart)
+
+
+@app.route('/visualise', methods=['GET', 'POST'])
+def visualise():
+    chart = None
+    if request.method == 'GET':
+        # Handle visualization logic here
+        x_col = request.args.get('xCol')
+        y_col = request.args.get('yCol')
+        chart_type = request.args.get('chartType')
+        title = request.args.get('title', 'Visualization')
+        color = request.args.get('color', 'blue')
+        grid = request.args.get('grid', '1') == '1'
+        figsize = tuple(map(int, request.args.get('figsize', '10,6').split(',')))
+
+        # Generate the chart using your existing plotting functions
+        if x_col and y_col and chart_type:
+            if chart_type == 'line':
+                chart = plots.plot_line(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
+            elif chart_type == 'bar':
+                chart = plots.plot_bar(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
+            # Add other chart types here...
+
+    return render_template('visualise.html', chart=chart)
+
+# ------------------------------------------------------------------
+# TODO: Move this to a forms.py file if we end up with more forms
+
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField
+
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired
+
+import pandas
+import io
+
+import matplotlib
+matplotlib.use('Agg')
+
+import matplotlib.pyplot
+
+import os
+
+
+class UploadForm(FlaskForm):
+    file = FileField('Select a File', validators=[ DataRequired() ])
+    submit = SubmitField('Submit')
 
 # ------------------------------------------------------------------
 

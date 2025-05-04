@@ -9,8 +9,17 @@ venv/
 instance/
 .env
 
+# SQLite database files
+*.db
+*.sqlite
+*.sqlite3
+app/users.db
+
 # Test coverage files
 .coverage
+
+# Generate files
+dataFrame.csv
 
 # Static files
 static/*.png

@@ -1,4 +1,11 @@
 from flask import Flask
+from flask_wtf.csrf import generate_csrf, CSRFProtect
+from flask_sqlalchemy import SQLAlchemy
+import os
+from app.model import db
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
 
 # Tell Flask where to find the static folder
 app = Flask(
@@ -7,10 +14,13 @@ app = Flask(
     template_folder='templates'
 )
 
-# TODO: Make this not absolutely suck
 app.secret_key = 'very-secret'
 
-from app import routes
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'users.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-if __name__ == '__main__':
-    app.run(debug=True)
+db.init_app(app) 
+csrf = CSRFProtect(app)
+
+from app import routes, model
+
