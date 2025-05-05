@@ -38,10 +38,6 @@ def login():
 @app.route('/dashboard')
 def dashboard():
     return render_template("dashboard.html")
-  
-@app.route('/profile')
-def profile():
-    return render_template("profile.html")
 
 @app.route('/edit-profile', methods=['GET', 'PATCH'])
 def edit_profile():
@@ -95,10 +91,6 @@ def analytics():
 @app.route('/profile')
 def profile():
     return render_template('profile.html')
-
-@app.route('/edit-profile', methods=['PATCH'])
-def edit_profile():
-    return render_template('edit_profile.html')
 
 @app.route('/add-friend', methods=['GET', 'POST'])
 def add_friend():
