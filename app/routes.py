@@ -105,7 +105,7 @@ def upload():
     form = UploadForm()
     chart = None
 
-    # returns True if the method is POST and the field conforms to all valiadators
+    # returns True if the method is POST and the field conforms to all validators
     if form.validate_on_submit():
 
         # parses primitive frame data into useful constructs
