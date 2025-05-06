@@ -4,13 +4,23 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app.model import User
 from app.model import db
 from app.form import SignupForm, LoginForm
+from functools import wraps
 
-
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('You need to log in to access this page.')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 @app.route('/logout')
 def logout():
-    # Logic to log out the user (e.g., clearing session data)
+    session.pop('user_id', None)
+    flash('Logged out.')
     return redirect('/login')
 
 @app.route('/')
@@ -21,25 +31,24 @@ def index():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        email = form.email.data
-        password = form.password.data
-        user = User.query.filter_by(email=email).first()
-        if user and check_password_hash(user.password, password):
-            session['user_email'] = email
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid email or password.')
-            return redirect(url_for('login'))
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and user.check_password(form.password.data):
+            session['user_id'] = user.id
+            flash('Login successful!')
+            return redirect('/profile')
+        flash('Invalid email or password.')
 
-    return render_template("login.html", form=form)
+    return render_template('login.html', form=form)
 
 
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
     return render_template("dashboard.html")
 
 @app.route('/edit-profile', methods=['GET', 'PATCH'])
+@login_required
 def edit_profile():
     if request.method == 'PATCH':
         # Handle form submission (e.g., save updated profile data)
@@ -56,47 +65,56 @@ def edit_profile():
 def signup():
     form = SignupForm()
     if form.validate_on_submit():
-        fullname = form.name.data
-        email = form.email.data
-        password = form.password.data
-        hashed = generate_password_hash(password)
-        existing_user = User.query.filter_by(email=email).first()
+        existing_user = User.query.filter_by(email=form.email.data).first()
         if existing_user:
-            flash("Email already exists.")
-            return redirect(url_for('login'))
+            flash('Email already registered.')
+            return redirect('/signup')
 
-        new_user = User(fullname=fullname, email=email, password=hashed)
+        new_user = User(
+            fullname=form.name.data,
+            email=form.email.data
+        )
+        new_user.set_password(form.password.data)
+
         db.session.add(new_user)
         db.session.commit()
+        flash('Signup successful!')
+        return redirect('/login')
 
-        flash("Signup successful!")
-        return redirect(url_for('login'))
-
-    return render_template("signup.html", form=form)
+    return render_template('signup.html', form=form)
 
 
 
 @app.route('/settings', methods=['GET', 'POST'])
+@login_required
 def settings():
     return render_template('settings.html')
 
 @app.route('/friends', methods=['GET'])
+@login_required
 def friends():
     return render_template('friends.html')
 
 @app.route('/analytics')
+@login_required
 def analytics():
     return render_template('analytics.html')
 
 @app.route('/profile')
+@login_required
 def profile():
-    return render_template('profile.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+    user = User.query.get(session['user_id'])
+    return render_template('profile.html', user=user)
 
 @app.route('/add-friend', methods=['GET', 'POST'])
+@login_required
 def add_friend():
     return render_template('add_friend.html')
 
 @app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload():
     form = UploadForm()
     path_chart = None #path for fronted
@@ -139,6 +157,7 @@ def upload():
 
 
 @app.route('/visualise', methods=['GET', 'POST'])
+@login_required
 def visualise():
     chart = None
     if request.method == 'GET':
@@ -192,6 +211,7 @@ from flask import send_file, request
 
 # plot endpoints
 @app.route('/plot/line')
+@login_required
 def plotLine():
     x = request.args.get('xCol')                            
     y = request.args.get('yCol').split(',') # format str,str,...
@@ -208,6 +228,7 @@ def plotLine():
     return send_file(plotData, mimetype='image/png')
 
 @app.route('/plot/scatter')
+@login_required
 def plotScat():
     x = request.args.get('xCol')                            
     y = request.args.get('yCol').split(',') # format str,str,...
@@ -224,6 +245,7 @@ def plotScat():
     return send_file(plotData, mimetype='image/png')
 
 @app.route('/plot/bar')
+@login_required
 def plotBar():
     x = request.args.get('xCol')                            
     y = request.args.get('yCol').split(',') # format str,str,...
@@ -240,6 +262,7 @@ def plotBar():
     return send_file(plotData, mimetype='image/png')
 
 @app.route('/plot/histogram')
+@login_required
 def plotHist():
     col = request.args.get('col')                            
     title = request.args.get('title', default= 'Pie Chart') 
@@ -256,6 +279,7 @@ def plotHist():
     return send_file(plotData, mimetype='image/png')
 
 @app.route('/plot/pie')
+@login_required
 def plotPie():
     col = request.args.get('col')                            
     title = request.args.get('title', default= 'Histogram Plot') 
@@ -267,6 +291,7 @@ def plotPie():
     return send_file(plotData, mimetype='image/png')
 
 @app.route('/plot/area')
+@login_required
 def plotArea():
     x = request.args.get('xCol')                            
     y = request.args.get('yCol').split(',') # format str,str,...
@@ -283,6 +308,7 @@ def plotArea():
     return send_file(plotData, mimetype='image/png')
 
 @app.route('/plot/box')
+@login_required
 def plotBox():
     x = request.args.get('xCol')                            
     y = request.args.get('yCol').split(',') # format str,str,...
