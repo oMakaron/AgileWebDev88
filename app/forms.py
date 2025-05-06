@@ -1,12 +1,32 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField
+from flask_wtf.file import FileField, FileAllowed
 
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms import StringField, SubmitField, PasswordField
+from wtforms.validators import DataRequired, Email, EqualTo, Length
 
 
 class UploadForm(FlaskForm):
-    file = FileField('Select a File', validators=[ DataRequired() ])
+    file = FileField('Select a File', validators=[
+        DataRequired(), FileAllowed('csv', 'Please select a csv file to upload.')
+    ])
     spec = StringField('Specify a format', validators=[ DataRequired() ])
     submit = SubmitField('Submit')
+
+class SignupForm(FlaskForm):
+    name = StringField('Full Name', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[
+        DataRequired(),
+        Length(min=8, message='Password too short. Minimum 8 characters.')
+    ])
+    confirm = PasswordField('Confirm Password', validators=[
+        DataRequired(),
+        EqualTo('password', message='Passwords must match.')
+    ])
+    submit = SubmitField('Sign Up')
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Sign In')
 
