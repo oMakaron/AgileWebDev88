@@ -1,6 +1,7 @@
 from unittest import TestCase
 
-from app.logic.specifier import ParseError, Parser, Tokenizer
+from app.services.specifier import ParseError, Parser
+from app.services.specifier.tokenizer import Tokenizer
 
 
 class Test(TestCase):

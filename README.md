@@ -79,7 +79,7 @@ Tests follow this template:
 class Test(TestCase):
 
     def test_something(self) -> None:
-        # ... test logic here ...
+        # ... test services here ...
         self.assertEqual(expected, given)
 ```
 

@@ -2,9 +2,9 @@ from unittest import TestCase
 
 from pandas import DataFrame
 
-from app.plots import registry
-from app.logic.specifier import Parser
-from app.logic.plotter_registry import BindError
+from app.services.plots.plotters import registry
+from app.services.specifier import Parser
+from app.services.plots.registry import BindError
 
 
 class Test(TestCase):

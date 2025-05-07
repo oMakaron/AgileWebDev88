@@ -1,8 +1,8 @@
-from app import app
-from flask import render_template, request, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash, check_password_hash
-from app.model import User, db
-from app.form import SignupForm, LoginForm, UploadForm
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import check_password_hash
+from app.models import User
+from app.extensions import db
+from app.forms import SignupForm, LoginForm, UploadForm
 from functools import wraps
 from io import BytesIO
 
@@ -12,29 +12,32 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('You need to log in to access this page.')
-            return redirect(url_for('login'))
+            return redirect(url_for('routes.login'))
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/logout')
+
+bp = Blueprint('routes', __name__)
+
+@bp.route('/logout')
 def logout():
     session.pop('user_id', None)
     flash('Logout successful!', 'success')
-    return redirect(url_for('login'))
+    return redirect(url_for('routes.login'))
 
 
-@app.after_request
+@bp.after_request
 def add_header(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
     return response
 
-@app.route('/')
+@bp.route('/')
 def index():
     return render_template("index.html")
     
-@app.route('/login', methods=['GET', 'POST'])
+@bp.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -42,36 +45,36 @@ def login():
         if user and check_password_hash(user.password, form.password.data):
             session['user_id'] = user.id
             flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('routes.dashboard'))
         flash('Invalid email or password.', 'error')
     return render_template('login.html', form=form)
 
-@app.route('/dashboard')
+@bp.route('/dashboard')
 @login_required
 def dashboard():
     return render_template("dashboard.html")
 
-@app.route('/edit-profile', methods=['GET', 'PATCH'])
+@bp.route('/edit-profile', methods=['GET', 'PATCH'])
 @login_required
 def edit_profile():
     if request.method == 'PATCH':
         # Handle form submission (e.g., save updated profile data)
         name = request.form.get('name')
         email = request.form.get('email')
-        # Save the data (this is just a placeholder, implement actual logic)
+        # Save the data (this is just a placeholder, implement actual services)
         print(f"Updated Name: {name}, Updated Email: {email}")
         return redirect('/profile')  # Redirect back to the profile page after saving
 
     return render_template("edit_profile.html")
 
-@app.route('/signup', methods=['GET', 'POST'])
+@bp.route('/signup', methods=['GET', 'POST'])
 def signup():
     form = SignupForm()
     if form.validate_on_submit():
         existing_user = User.query.filter_by(email=form.email.data).first()
         if existing_user:
             flash('Email already registered.', 'error')
-            return redirect(url_for('signup'))
+            return redirect(url_for('routes.signup'))
 
         new_user = User(
             fullname=form.name.data,
@@ -82,45 +85,43 @@ def signup():
         db.session.commit()
 
         flash('Signup successful!', 'success')
-        return redirect(url_for('login'))
+        return redirect(url_for('routes.login'))
 
     return render_template('signup.html', form=form)
 
 
-@app.route('/settings', methods=['GET', 'POST'])
+@bp.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
     return render_template('settings.html')
 
-@app.route('/friends', methods=['GET'])
+@bp.route('/friends', methods=['GET'])
 @login_required
 def friends():
     return render_template('friends.html')
 
-@app.route('/analytics')
+@bp.route('/analytics')
 @login_required
 def analytics():
     return render_template('analytics.html')
 
-@app.route('/profile')
+@bp.route('/profile')
 @login_required
 def profile():
     user = User.query.get(session['user_id'])
     return render_template('profile.html', user=user)
 
-@app.route('/add-friend', methods=['GET', 'POST'])
+@bp.route('/add-friend', methods=['GET', 'POST'])
 @login_required
 def add_friend():
     return render_template('add_friend.html')
 
 
-from app.logic.specifier import Parser
-from app.logic.plotter import read_csv, save_to_string
-from app.plots import registry
+from app.services import Parser, registry, read_csv, save_to_string
 
 from matplotlib.pyplot import close
 
-@app.route('/upload', methods=['GET', 'POST'])
+@bp.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
     form = UploadForm()
@@ -160,7 +161,7 @@ def upload():
     return render_template('upload.html', form=form, chart=chart)
 
 
-@app.route('/visualise', methods=['GET', 'POST'])
+@bp.route('/visualise', methods=['GET', 'POST'])
 @login_required
 def visualise():
     chart = None
@@ -168,7 +169,7 @@ def visualise():
 # This just needs to be reworked 
 #
 #    if request.method == 'GET':
-#        # Handle visualization logic here
+#        # Handle visualization services here
 #        x_col = request.args.get('xCol')
 #        y_col = request.args.get('yCol')
 #        chart_type = request.args.get('chartType')

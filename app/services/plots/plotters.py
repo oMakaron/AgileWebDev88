@@ -5,11 +5,11 @@ from matplotlib.pyplot import subplots
 
 from pandas import DataFrame
 
-from app.logic.plotter_registry import PlotRegistry
+from app.services.plots.registry import PlotRegistry
 
 
 registry = PlotRegistry(remaps={
-    # makes it so that match 'true' are true and everythin else is false.
+    # makes it so that match 'true' are true and everything else is false.
     # TODO: Make this explicitly check for false and throw an error if neither true not false
     bool: lambda string: string.lower() == 'true',
 

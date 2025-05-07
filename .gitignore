@@ -14,6 +14,7 @@ instance/
 *.sqlite
 *.sqlite3
 app/users.db
+app/app.db
 
 # Test coverage files
 .coverage
@@ -23,7 +24,7 @@ dataFrame.csv
 
 # Static files
 static/*.png
-static/css/output.css
+app/static/css/output.css
 
 # Node.js (Tailwind)
 node_modules/

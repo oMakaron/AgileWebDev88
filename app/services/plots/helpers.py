@@ -15,8 +15,7 @@ def read_csv(file) -> pd.DataFrame:
 def save_to_string(figure: Figure) -> str:
     with BytesIO() as buffer:
         figure.savefig(buffer, format='png')
-        # we have to rewind so that we start reading from the begginging rather than the end
+        # we have to rewind so that we start reading from the beginning rather than the end
         buffer.seek(0)
         image = b64encode(buffer.read()).decode('utf-8')
     return image
-
