@@ -1,46 +1,58 @@
 from app import app
-
 from flask import render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
-
 from app.model import User, db
-from app.forms import SignupForm, LoginForm, UploadForm
-
+from app.form import SignupForm, LoginForm, UploadForm
+from functools import wraps
 from io import BytesIO
 
-
-
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('You need to log in to access this page.')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/logout')
 def logout():
-    # Logic to log out the user (e.g., clearing session data)
-    return redirect('/login')
+    session.pop('user_id', None)
+    flash('Logout successful!', 'success')
+    return redirect(url_for('login'))
+
+
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 @app.route('/')
 def index():
     return render_template("index.html")
-
+    
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        email = form.email.data
-        password = form.password.data
-        user = User.query.filter_by(email=email).first()
-        if user and check_password_hash(user.password, password):
-            session['user_email'] = email
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and check_password_hash(user.password, form.password.data):
+            session['user_id'] = user.id
+            flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid email or password.')
-            return redirect(url_for('login'))
-
-    return render_template("login.html", form=form)
+        flash('Invalid email or password.', 'error')
+    return render_template('login.html', form=form)
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
     return render_template("dashboard.html")
 
 @app.route('/edit-profile', methods=['GET', 'PATCH'])
+@login_required
 def edit_profile():
     if request.method == 'PATCH':
         # Handle form submission (e.g., save updated profile data)
@@ -56,40 +68,48 @@ def edit_profile():
 def signup():
     form = SignupForm()
     if form.validate_on_submit():
-        fullname = form.name.data
-        email = form.email.data
-        password = form.password.data
-        hashed = generate_password_hash(password)
-        existing_user = User.query.filter_by(email=email).first()
+        existing_user = User.query.filter_by(email=form.email.data).first()
         if existing_user:
-            flash("Email already exists.")
-            return redirect(url_for('login'))
-        new_user = User(fullname=fullname, email=email, password=hashed)
+            flash('Email already registered.', 'error')
+            return redirect(url_for('signup'))
+
+        new_user = User(
+            fullname=form.name.data,
+            email=form.email.data
+        )
+        new_user.set_password(form.password.data)
         db.session.add(new_user)
         db.session.commit()
 
-        flash("Signup successful!")
+        flash('Signup successful!', 'success')
         return redirect(url_for('login'))
 
-    return render_template("signup.html", form=form)
+    return render_template('signup.html', form=form)
+
 
 @app.route('/settings', methods=['GET', 'POST'])
+@login_required
 def settings():
     return render_template('settings.html')
 
 @app.route('/friends', methods=['GET'])
+@login_required
 def friends():
     return render_template('friends.html')
 
 @app.route('/analytics')
+@login_required
 def analytics():
     return render_template('analytics.html')
 
 @app.route('/profile')
+@login_required
 def profile():
-    return render_template('profile.html')
+    user = User.query.get(session['user_id'])
+    return render_template('profile.html', user=user)
 
 @app.route('/add-friend', methods=['GET', 'POST'])
+@login_required
 def add_friend():
     return render_template('add_friend.html')
 
@@ -101,6 +121,7 @@ from app.plots import registry
 from matplotlib.pyplot import close
 
 @app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload():
     form = UploadForm()
     chart = None
@@ -140,6 +161,7 @@ def upload():
 
 
 @app.route('/visualise', methods=['GET', 'POST'])
+@login_required
 def visualise():
     chart = None
 #

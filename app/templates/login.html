@@ -4,22 +4,6 @@
 {% block content %}
 <div class="bg-white shadow-xl rounded-2xl p-10 max-w-md w-full">
     <h2 class="text-3xl font-bold mb-6 text-center text-blue-700">Log In</h2>
-
-
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    {% for message in messages %}
-      <div class="mb-4 p-3 rounded bg-white text-sm
-                  {% if message == 'Signup successful!' %}
-                    text-green-600 border border-green-200
-                  {% else %}
-                    text-red-600 border border-red-200
-                  {% endif %}">
-        {{ message }}
-      </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
     
     <form method="POST" class="space-y-5">
       {{ form.hidden_tag() }}
@@ -37,7 +21,6 @@
       {{ form.submit(class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition") }}
     </form>
     
-
     <p class="text-sm text-gray-600 mt-6 text-center">
         Don't have an account?
         <a href="/signup" class="text-blue-600 hover:underline">Sign up</a>

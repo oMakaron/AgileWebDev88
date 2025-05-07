@@ -2,6 +2,37 @@
 {% block title %}Dashboard – DataVizApp{% endblock %}
 
 {% block content %}
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=True) %}
+  {% if messages %}
+    <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 10000)" x-show="show"
+         x-transition:enter="transition ease-out duration-500"
+         x-transition:enter-start="opacity-0 -translate-y-5"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-300"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-5"
+         class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-white border-l-4 border-green-500 shadow-lg rounded px-6 py-4 z-50 w-[300px]">
+      
+      <div class="flex justify-between items-center">
+        <div class="text-green-700 text-sm font-medium">
+          {% for category, message in messages %}
+            {% if category == 'success' %}
+              {{ message }}
+            {% endif %}
+          {% endfor %}
+        </div>
+        <button @click="show = false" class="ml-4 text-gray-400 hover:text-gray-600 font-bold text-lg leading-none">&times;</button>
+      </div>
+
+      <!-- Shrinking progress bar -->
+      <div class="h-1 mt-2 bg-green-200 overflow-hidden rounded">
+        <div class="h-full bg-green-500 animate-toast-progress"></div>
+      </div>
+    </div>
+  {% endif %}
+{% endwith %}
+
 <div class="min-h-screen bg-gray-50 py-8 px-4">
   <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
     <!-- Left Panel: Data & Analytics -->
