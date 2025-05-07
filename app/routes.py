@@ -1,6 +1,5 @@
 from app import app
 from flask import render_template, request, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash, check_password_hash
 from app.model import User
 from app.model import db
 from app.form import SignupForm, LoginForm
@@ -16,12 +15,19 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
-    flash('Logged out.')
-    return redirect('/login')
+    flash('Logout successful!', 'success')
+    return redirect(url_for('login'))
+
+
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 @app.route('/')
 def index():
@@ -34,13 +40,11 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             session['user_id'] = user.id
-            flash('Login successful!')
-            return redirect('/profile')
-        flash('Invalid email or password.')
+            flash('Login successful!', 'success')  # Flash success message
+            return redirect('/dashboard')  # Redirect to the dashboard
+        flash('Invalid email or password.', 'error')  # Flash error message
 
     return render_template('login.html', form=form)
-
-
 
 @app.route('/dashboard')
 @login_required
@@ -103,8 +107,6 @@ def analytics():
 @app.route('/profile')
 @login_required
 def profile():
-    if 'user_id' not in session:
-        return redirect('/login')
     user = User.query.get(session['user_id'])
     return render_template('profile.html', user=user)
 
@@ -324,3 +326,4 @@ def plotBox():
     return send_file(plotData, mimetype='image/png')
 
 # ------------------------------------------------------------------
+
