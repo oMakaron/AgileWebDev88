@@ -1,121 +1,139 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import io
+from typing import Optional
 
-def plot_line(x_col, y_col, title='Line Plot', color='blue', xlabel=None, ylabel=None, figsize=(10, 6), grid=True):
-    df = pd.read_csv("dataFrame.csv")
+from matplotlib.figure import Figure
+from matplotlib.pyplot import subplots
 
-    # Create a line plot
-    ax = df.plot(x=x_col, y=y_col, kind='line', color=color, title=title, figsize=figsize)
-    ax.set_xlabel(xlabel if xlabel else x_col)
-    ax.set_ylabel(ylabel if ylabel else y_col)
-    if grid:
-        plt.grid()
-    #plt.show
+from pandas import DataFrame
 
-    # Save to PNG in a memory buffer 
-    img_buf = io.BytesIO()
-    plt.savefig(img_buf, format='png')
-    img_buf.seek(0)
-    return img_buf
+from app.logic.plotter_registry import PlotRegistry
 
-def plot_scatter(x_col, y_col, title='Scatter Plot', color='blue', xlabel=None, ylabel=None, figsize=(10, 6), grid=True):
-    df = pd.read_csv("dataFrame.csv")
+
+registry = PlotRegistry(remaps={
+    # makes it so that match 'true' are true and everythin else is false.
+    # TODO: Make this explicitly check for false and throw an error if neither true not false
+    bool: lambda string: string.lower() == 'true',
+
+    # TODO: Allow tuples in the parser, or at the very least allow values to start with numbers so
+    # the `_` prefix is not necesary
+    tuple[int, int]: lambda string: tuple(int(val.removeprefix('_')) for val in string.split('x')),
+})
+
+
+@registry.register_as('line')
+def plot_line(
+    source: DataFrame,
+    x_col: str, y_col: str,
+    title: str = 'Line Plot', x_label: Optional[str] = None, y_label: Optional[str] = None,
+    color: str = 'blue', figsize: tuple[int, int] = (10, 6), grid: bool = True
+) -> Figure:
+
+    # Create a line graph
+    figure, axes = subplots(figsize=figsize)
+    axes.plot(source[x_col], source[y_col], color = color)
+    axes.set(title = title, xlabel = x_label or x_col, ylabel = y_label or y_col)
+    axes.grid(visible=grid)
+
+    return figure
+
+
+@registry.register_as('scatter')
+def plot_scatter(
+    source: DataFrame,
+    x_col: str, y_col: str,
+    title: str = 'Scatter Plot', x_label: Optional[str] = None, y_label: Optional[str] = None,
+    color: str = 'blue', figsize: tuple[int, int] = (10, 6), grid: bool = True
+) -> Figure:
 
     # Create a scatter plot
-    ax = df.plot(x=x_col, y=y_col, kind='scatter', color=color, title=title, figsize=figsize)
-    ax.set_xlabel(xlabel if xlabel else x_col)
-    ax.set_ylabel(ylabel if ylabel else y_col)
-    if grid:
-        plt.grid()
-    #plt.show()
+    figure, axes = subplots(figsize=figsize)
+    axes.scatter(source[x_col], source[y_col], color = color)
+    axes.set(title = title, xlabel = x_label or x_col, ylabel = y_label or y_col)
+    axes.grid(visible=grid)
 
-    # Save to PNG in a memory buffer 
-    img_buf = io.BytesIO()
-    plt.savefig(img_buf, format='png')
-    img_buf.seek(0)
-    return img_buf
+    return figure
 
-def plot_bar(x_col, y_col, title='Bar Chart', color='blue', xlabel=None, ylabel=None, figsize=(10, 6), grid=True):
-    df = pd.read_csv("dataFrame.csv")
+
+@registry.register_as('bar')
+def plot_bar(
+    source: DataFrame,
+    x_col: str, y_col: str,
+    title: str = 'Bar Chart', x_label: Optional[str] = None, y_label: Optional[str] = None,
+    color:str = 'blue', figsize: tuple[int, int] = (10, 6), grid: bool = True
+) -> Figure:
 
     # Create a bar chart
-    ax = df.plot(x=x_col, y=y_col, kind='bar', color=color, title=title, figsize=figsize)
-    ax.set_xlabel(xlabel if xlabel else x_col)
-    ax.set_ylabel(ylabel if ylabel else y_col)
-    if grid:
-        plt.grid()
-    #plt.show()
+    figure, axes = subplots(figsize=figsize)
+    axes.bar(source[x_col], source[y_col], color = color)
+    axes.set(title = title, xlabel = x_label or x_col, ylabel = y_label or y_col)
+    axes.grid(visible=grid)
 
-    # Save to PNG in a memory buffer 
-    img_buf = io.BytesIO()
-    plt.savefig(img_buf, format='png')
-    img_buf.seek(0)
-    return img_buf
+    return figure
 
-def plot_histogram(column, title='Histogram', color='blue', bins=10, xlabel=None, ylabel='Frequency', figsize=(10, 6), grid=True):
-    df = pd.read_csv("dataFrame.csv")
 
-    #Create a histogram
-    ax = df[column].plot(kind='hist', color=color, title=title, bins=bins, figsize=figsize)
-    ax.set_xlabel(xlabel if xlabel else column)
-    ax.set_ylabel(ylabel)
-    if grid:
-        plt.grid()
-    #plt.show()
+@registry.register_as('histogram')
+def plot_histogram(
+    source: DataFrame,
+    column: str, bins: int = 10,
+    title: str = 'Histogram', x_label: Optional[str] = None, y_label: Optional[str] = None,
+    color: str = 'blue', figsize: tuple[int, int] = (10, 6), grid: bool = True
+) -> Figure:
 
-    # Save to PNG in a memory buffer 
-    img_buf = io.BytesIO()
-    plt.savefig(img_buf, format='png')
-    img_buf.seek(0)
-    return img_buf
+    # Create a histogram
+    figure, axes = subplots(figsize=figsize)
+    axes.hist(source[column], bins = bins, color = color)
+    axes.set(title = title, xlabel = x_label or column, ylabel = y_label or 'Frequency')
+    axes.grid(visible=grid)
 
-def plot_pie(column, title='Pie Chart', figsize=(8, 8), angle = 90):
-    df = pd.read_csv("dataFrame.csv")
+    return figure
+
+
+@registry.register_as('pie')
+def plot_pie(
+    source: DataFrame,
+    column: str, angle: float = 90,
+    title: str = 'Pie Chart', figsize: tuple[int, int] = (10, 6)
+) -> Figure:
 
     # Create a pie chart
-    plt.figure(figsize=figsize)
-    df[column].value_counts().plot(kind='pie', title=title, autopct='%1.1f%%', startangle=angle)
-    plt.ylabel('')  # Hide the y-label
-    #plt.show()
+    figure, axes = subplots(figsize = figsize)
+    counts = source[column].value_counts()
+    axes.pie(counts, startangle = angle, labels = counts.index.to_list(), autopct = '%1.1f%%')
+    axes.set(title = title)
 
-    # Save to PNG in a memory buffer 
-    img_buf = io.BytesIO()
-    plt.savefig(img_buf, format='png')
-    img_buf.seek(0)
-    return img_buf
+    return figure
 
-def plot_area(x_col, y_col, title='Area Plot', color='blue', xlabel=None, ylabel=None, figsize=(10, 6), grid=True):
-    df = pd.read_csv("dataFrame.csv")
+
+@registry.register_as('area')
+def plot_area(
+    source: DataFrame,
+    x_col: str, y_col: str,
+    title: str = 'Area Plot', x_label: Optional[str] = None, y_label: Optional[str] = None,
+    color: str = 'blue', figsize: tuple[int, int] = (10, 6), grid: bool = True
+) -> Figure:
 
     # Create an area plot
-    ax = df.plot(x=x_col, y=y_col, kind='area', color=color, title=title, figsize=figsize)
-    ax.set_xlabel(xlabel if xlabel else x_col)
-    ax.set_ylabel(ylabel if ylabel else y_col)
-    if grid:
-        plt.grid()
-    #plt.show()
+    figure, axes = subplots(figsize = figsize)
+    axes.stackplot(source[x_col], source[y_col], color = color)
+    axes.set(title = title, xlabel = x_label or x_col, ylabel = y_label or y_col)
+    axes.grid(visible=grid)
 
-    # Save to PNG in a memory buffer 
-    img_buf = io.BytesIO()
-    plt.savefig(img_buf, format='png')
-    img_buf.seek(0)
-    return img_buf
+    return figure
 
-def plot_box(x_col, y_col, title='Box Plot', xlabel=None, ylabel=None, figsize=(10, 6), grid=True):
-    df = pd.read_csv("dataFrame.csv")
+
+@registry.register_as('box')
+def plot_box(
+    source: DataFrame,
+    x_col: str, y_col: str,
+    title: str = 'Box Plot', x_label: Optional[str] = None, y_label: Optional[str] = None,
+    figsize: tuple[int, int] = (10, 6), grid: bool = True
+) -> Figure:
 
     # Create a box plot
-    ax = df.boxplot(column=y_col, by=x_col, grid=grid, figsize=figsize)
-    plt.title(title)
-    plt.xlabel(xlabel if xlabel else x_col)
-    plt.ylabel(ylabel if ylabel else y_col)
-    if grid:
-        plt.grid()
-    #plt.show()
+    figure, axes = subplots(figsize = figsize)
+    source.boxplot(column = y_col, by = x_col, ax = axes)
 
-    # Save to PNG in a memory buffer 
-    img_buf = io.BytesIO()
-    plt.savefig(img_buf, format='png')
-    img_buf.seek(0)
-    return img_buf
+    axes.set(title = title, xlabel = x_label or x_col, ylabel = y_label or y_col)
+    axes.grid(visible=grid)
+
+    return figure
+

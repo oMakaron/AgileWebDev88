@@ -1,9 +1,10 @@
 from app import app
 from flask import render_template, request, redirect, url_for, flash, session
-from app.model import User
-from app.model import db
-from app.form import SignupForm, LoginForm
+from werkzeug.security import generate_password_hash, check_password_hash
+from app.model import User, db
+from app.form import SignupForm, LoginForm, UploadForm
 from functools import wraps
+from io import BytesIO
 
 # Login required decorator
 def login_required(f):
@@ -32,18 +33,17 @@ def add_header(response):
 @app.route('/')
 def index():
     return render_template("index.html")
-
+    
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.check_password(form.password.data):
+        if user and check_password_hash(user.password, form.password.data):
             session['user_id'] = user.id
-            flash('Login successful!', 'success')  # Flash success message
-            return redirect('/dashboard')  # Redirect to the dashboard
-        flash('Invalid email or password.', 'error')  # Flash error message
-
+            flash('Login successful!', 'success')
+            return redirect(url_for('dashboard'))
+        flash('Invalid email or password.', 'error')
     return render_template('login.html', form=form)
 
 @app.route('/dashboard')
@@ -64,7 +64,6 @@ def edit_profile():
 
     return render_template("edit_profile.html")
 
-
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     form = SignupForm()
@@ -79,7 +78,6 @@ def signup():
             email=form.email.data
         )
         new_user.set_password(form.password.data)
-
         db.session.add(new_user)
         db.session.commit()
 
@@ -87,8 +85,6 @@ def signup():
         return redirect(url_for('login'))
 
     return render_template('signup.html', form=form)
-
-
 
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -117,215 +113,77 @@ def profile():
 def add_friend():
     return render_template('add_friend.html')
 
+
+from app.logic.specifier import Parser
+from app.logic.plotter import read_csv, save_to_string
+from app.plots import registry
+
+from matplotlib.pyplot import close
+
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
     form = UploadForm()
-    path_chart = None #path for fronted
+    chart = None
 
-    # validate_on_submit returns True if the method is POST
-    # and the field conforms to all valiadators
+    # returns True if the method is POST and the field conforms to all validators
     if form.validate_on_submit():
-        user_file = io.BytesIO(form.file.data.read())
-        df = pandas.read_csv(user_file, encoding='utf-8')
-        df.to_csv("dataFrame.csv", index= False) # For importing purposes, would be better to use database
 
-        #a really basic way to generating image
-        x_col = None
-        y_col = None
+        # parses primitive frame data into useful constructs
+        data = read_csv(BytesIO(form.file.data.read()))
+        spec = Parser.parse_string(form.spec.data)
 
-        for col in df.columns:
-            if df[col].dtype == 'object':
-                x_col = col
-                break
+        if 'type' not in spec:
+            raise Exception('Need a type')
 
-        for col in df.columns:
-            if pandas.api.types.is_numeric_dtype(df[col]):
-                y_col = col
-                if col != x_col:
-                    break
+        plot_type = spec.pop('type')
+        plot_type = plot_type[0] if isinstance(plot_type, list) else plot_type
 
+        plotter = registry.functions[plot_type]
 
-        if x_col and y_col:
-            matplotlib.pyplot.figure(figsize=(4, 2))  # chart size we can change later
-            df.plot(x=x_col, y=y_col, kind='bar', legend=False) # we can change type bar to the others, just for now
-            matplotlib.pyplot.tight_layout()
+        # TODO: Catch errors and report the message to the user
+        bound, unbound = plotter.bind_args(source = data, **spec)
 
-            path_static = os.path.join(app.root_path, 'static', 'chart.png')
-            matplotlib.pyplot.savefig(path_static)
-            matplotlib.pyplot.close()
+        if unbound:
+            # TODO: Flash these messages to the user so that they can understand why their
+            # option isn't doing anything. Maybe make `unbound` also offer near matches?
+            print(unbound)
 
-            path_chart = 'chart.png'
+        # generates a base64 encoding of a png so that we don't have to save locally
+        figure = plotter.function(**bound)
+        image = save_to_string(figure)
+        close(figure)
 
-    return render_template('upload.html', form=form, chart=path_chart)
+        # this boilerplate is necessary to get the browser to interpret the string as a png
+        chart = f"data:image/png;base64,{image}"
+
+    return render_template('upload.html', form=form, chart=chart)
 
 
 @app.route('/visualise', methods=['GET', 'POST'])
 @login_required
 def visualise():
     chart = None
-    if request.method == 'GET':
-        # Handle visualization logic here
-        x_col = request.args.get('xCol')
-        y_col = request.args.get('yCol')
-        chart_type = request.args.get('chartType')
-        title = request.args.get('title', 'Visualization')
-        color = request.args.get('color', 'blue')
-        grid = request.args.get('grid', '1') == '1'
-        figsize = tuple(map(int, request.args.get('figsize', '10,6').split(',')))
-
-        # Generate the chart using your existing plotting functions
-        if x_col and y_col and chart_type:
-            if chart_type == 'line':
-                chart = plots.plot_line(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
-            elif chart_type == 'bar':
-                chart = plots.plot_bar(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
-            # Add other chart types here...
+#
+# This just needs to be reworked 
+#
+#    if request.method == 'GET':
+#        # Handle visualization logic here
+#        x_col = request.args.get('xCol')
+#        y_col = request.args.get('yCol')
+#        chart_type = request.args.get('chartType')
+#        title = request.args.get('title', 'Visualization')
+#        color = request.args.get('color', 'blue')
+#        grid = request.args.get('grid', '1') == '1'
+#        figsize = tuple(map(int, request.args.get('figsize', '10,6').split(',')))
+#
+#        # Generate the chart using your existing plotting functions
+#        if x_col and y_col and chart_type:
+#            if chart_type == 'line':
+#                chart = plots.plot_line(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
+#            elif chart_type == 'bar':
+#                chart = plots.plot_bar(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
+#            # Add other chart types here...
 
     return render_template('visualise.html', chart=chart)
-
-# ------------------------------------------------------------------
-# TODO: Move this to a forms.py file if we end up with more forms
-
-from flask_wtf import FlaskForm
-from flask_wtf.file import FileField
-
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired
-
-import pandas
-import io
-
-import matplotlib
-matplotlib.use('Agg')
-
-import matplotlib.pyplot
-
-import os
-
-
-class UploadForm(FlaskForm):
-    file = FileField('Select a File', validators=[ DataRequired() ])
-    submit = SubmitField('Submit')
-
-# ------------------------------------------------------------------
-
-from app import plots
-from flask import send_file, request
-
-# plot endpoints
-@app.route('/plot/line')
-@login_required
-def plotLine():
-    x = request.args.get('xCol')                            
-    y = request.args.get('yCol').split(',') # format str,str,...
-    title = request.args.get('title', default= 'Line Plot') 
-    color = request.args.get('color', default= 'blue')
-    xlabel = request.args.get('xlabel')
-    ylabel = request.args.get('ylabel')
-    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
-    fig = (int(fig[0]), int(fig[1]))
-    grid = request.args.get('grid', type= int)
-    grid = True if grid == 1 else False
-
-    plotData = plots.plot_line(x_col= x, y_col= y, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
-    return send_file(plotData, mimetype='image/png')
-
-@app.route('/plot/scatter')
-@login_required
-def plotScat():
-    x = request.args.get('xCol')                            
-    y = request.args.get('yCol').split(',') # format str,str,...
-    title = request.args.get('title', default= 'Scatter Plot') 
-    color = request.args.get('color', default= 'blue')
-    xlabel = request.args.get('xlabel')
-    ylabel = request.args.get('ylabel')
-    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
-    fig = (int(fig[0]), int(fig[1]))
-    grid = request.args.get('grid', type= int)
-    grid = True if grid == 1 else False
-
-    plotData = plots.plot_scatter(x_col= x, y_col= y, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
-    return send_file(plotData, mimetype='image/png')
-
-@app.route('/plot/bar')
-@login_required
-def plotBar():
-    x = request.args.get('xCol')                            
-    y = request.args.get('yCol').split(',') # format str,str,...
-    title = request.args.get('title', default= 'Bar Plot') 
-    color = request.args.get('color', default= 'blue')
-    xlabel = request.args.get('xlabel')
-    ylabel = request.args.get('ylabel')
-    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
-    fig = (int(fig[0]), int(fig[1]))
-    grid = request.args.get('grid', type= int)
-    grid = True if grid == 1 else False
-
-    plotData = plots.plot_bar(x_col= x, y_col= y, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
-    return send_file(plotData, mimetype='image/png')
-
-@app.route('/plot/histogram')
-@login_required
-def plotHist():
-    col = request.args.get('col')                            
-    title = request.args.get('title', default= 'Pie Chart') 
-    color = request.args.get('color', default= 'blue')
-    xlabel = request.args.get('xlabel')
-    ylabel = request.args.get('ylabel', default= 'Frequency')
-    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
-    fig = (int(fig[0]), int(fig[1]))
-    grid = request.args.get('grid', type= int)
-    grid = True if grid == 1 else False
-    bin = request.args.get('bins', type= int)
-
-    plotData = plots.plot_histogram(column= col, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid, bins= bin)
-    return send_file(plotData, mimetype='image/png')
-
-@app.route('/plot/pie')
-@login_required
-def plotPie():
-    col = request.args.get('col')                            
-    title = request.args.get('title', default= 'Histogram Plot') 
-    fig = request.args.get('fig', default= '8,8').split(',')   # format num,num
-    fig = (int(fig[0]), int(fig[1]))
-    angle = request.args.get('angle', type= int, default= 90)
-
-    plotData = plots.plot_pie(column= col, title= title, figsize= fig, angle= angle)
-    return send_file(plotData, mimetype='image/png')
-
-@app.route('/plot/area')
-@login_required
-def plotArea():
-    x = request.args.get('xCol')                            
-    y = request.args.get('yCol').split(',') # format str,str,...
-    title = request.args.get('title', default= 'Area Plot') 
-    color = request.args.get('color', default= 'blue')
-    xlabel = request.args.get('xlabel')
-    ylabel = request.args.get('ylabel')
-    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
-    fig = (int(fig[0]), int(fig[1]))
-    grid = request.args.get('grid', type= int)
-    grid = True if grid == 1 else False
-
-    plotData = plots.plot_area(x_col= x, y_col= y, title= title, color= color, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
-    return send_file(plotData, mimetype='image/png')
-
-@app.route('/plot/box')
-@login_required
-def plotBox():
-    x = request.args.get('xCol')                            
-    y = request.args.get('yCol').split(',') # format str,str,...
-    title = request.args.get('title', default= 'Box Plot') 
-    xlabel = request.args.get('xlabel')
-    ylabel = request.args.get('ylabel')
-    fig = request.args.get('fig', default= '10,6').split(',')   # format num,num
-    fig = (int(fig[0]), int(fig[1]))
-    grid = request.args.get('grid', type= int)
-    grid = True if grid == 1 else False
-
-    plotData = plots.plot_box(x_col= x, y_col= y, title= title, xlabel= xlabel, ylabel= ylabel, figsize= fig, grid= grid)
-    return send_file(plotData, mimetype='image/png')
-
-# ------------------------------------------------------------------
 
