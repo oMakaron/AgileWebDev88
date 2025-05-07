@@ -71,8 +71,8 @@ def signup():
     if form.validate_on_submit():
         existing_user = User.query.filter_by(email=form.email.data).first()
         if existing_user:
-            flash('Email already registered.')
-            return redirect('/signup')
+            flash('Email already registered.', 'error')
+            return redirect(url_for('signup'))
 
         new_user = User(
             fullname=form.name.data,
@@ -82,10 +82,12 @@ def signup():
 
         db.session.add(new_user)
         db.session.commit()
-        flash('Signup successful!')
-        return redirect('/login')
+
+        flash('Signup successful!', 'success')
+        return redirect(url_for('login'))
 
     return render_template('signup.html', form=form)
+
 
 
 
