@@ -2,7 +2,7 @@ from app import app
 from flask import render_template, request, redirect, url_for, flash, session
 from app.model import User
 from app.model import db
-from app.form import SignupForm, LoginForm
+from app.form import SignupForm, LoginForm, EditProfileForm
 from functools import wraps
 
 # Login required decorator
@@ -51,18 +51,40 @@ def login():
 def dashboard():
     return render_template("dashboard.html")
 
-@app.route('/edit-profile', methods=['GET', 'PATCH'])
+@app.route('/edit-profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    if request.method == 'PATCH':
-        # Handle form submission (e.g., save updated profile data)
-        name = request.form.get('name')
-        email = request.form.get('email')
-        # Save the data (this is just a placeholder, implement actual logic)
-        print(f"Updated Name: {name}, Updated Email: {email}")
-        return redirect('/profile')  # Redirect back to the profile page after saving
+    user = User.query.get(session['user_id'])
+    form = EditProfileForm()
 
-    return render_template("edit_profile.html")
+    if form.validate_on_submit():
+        # Verify current password
+        if not user.check_password(form.current_password.data):
+            flash('Incorrect current password.', 'error')
+            return redirect(url_for('edit_profile'))
+
+        # Check if new email is already taken by someone else
+        if form.email.data and form.email.data != user.email:
+            existing_user = User.query.filter_by(email=form.email.data).first()
+            if existing_user:
+                flash('Email is already registered to another account.', 'error')
+                return redirect(url_for('edit_profile'))
+
+        # Update name/email
+        if form.name.data:
+            user.fullname = form.name.data
+        if form.email.data:
+            user.email = form.email.data
+
+        # Update password if both fields provided
+        if form.new_password.data and form.confirm_password.data:
+            user.set_password(form.new_password.data)
+
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('edit_profile.html', form=form)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
