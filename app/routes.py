@@ -1,12 +1,14 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import check_password_hash
-from app.models import User
-from app.extensions import db
-from app.forms import SignupForm, LoginForm, UploadForm
 from functools import wraps
 from io import BytesIO
-from app.services import Parser, registry, read_csv, save_to_string
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
+
+from app.extensions import db
+from app.models import User
+from app.forms import SignupForm, LoginForm, UploadForm
+from app.services import Parser, registry, read_csv, save_to_string
 
 
 # Login required decorator
