@@ -14,7 +14,7 @@ registry = PlotRegistry(remaps={
     bool: lambda string: string.lower() == 'true',
 
     # TODO: Allow tuples in the parser, or at the very least allow values to start with numbers so
-    # the `_` prefix is not necesary
+    # the `_` prefix is not necessary
     tuple[int, int]: lambda string: tuple(int(val.removeprefix('_')) for val in string.split('x')),
 })
 
