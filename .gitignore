@@ -32,6 +32,7 @@ package-lock.json
 
 # VS Code config
 .vscode/
+.idea
 
 # OS system junk
 .DS_Store

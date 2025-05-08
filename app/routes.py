@@ -5,6 +5,9 @@ from app.extensions import db
 from app.forms import SignupForm, LoginForm, UploadForm
 from functools import wraps
 from io import BytesIO
+from app.services import Parser, registry, read_csv, save_to_string
+from matplotlib.pyplot import close
+
 
 # Login required decorator
 def login_required(f):
@@ -14,29 +17,17 @@ def login_required(f):
             flash('You need to log in to access this page.')
             return redirect(url_for('routes.login'))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
 bp = Blueprint('routes', __name__)
 
-@bp.route('/logout')
-def logout():
-    session.pop('user_id', None)
-    flash('Logout successful!', 'success')
-    return redirect(url_for('routes.login'))
 
+# ---------------------------------------------------------------------------------------------------------------------
+# Auth routes
+#
 
-@bp.after_request
-def add_header(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
-
-@bp.route('/')
-def index():
-    return render_template("index.html")
-    
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -49,23 +40,6 @@ def login():
         flash('Invalid email or password.', 'error')
     return render_template('login.html', form=form)
 
-@bp.route('/dashboard')
-@login_required
-def dashboard():
-    return render_template("dashboard.html")
-
-@bp.route('/edit-profile', methods=['GET', 'PATCH'])
-@login_required
-def edit_profile():
-    if request.method == 'PATCH':
-        # Handle form submission (e.g., save updated profile data)
-        name = request.form.get('name')
-        email = request.form.get('email')
-        # Save the data (this is just a placeholder, implement actual services)
-        print(f"Updated Name: {name}, Updated Email: {email}")
-        return redirect('/profile')  # Redirect back to the profile page after saving
-
-    return render_template("edit_profile.html")
 
 @bp.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -90,20 +64,16 @@ def signup():
     return render_template('signup.html', form=form)
 
 
-@bp.route('/settings', methods=['GET', 'POST'])
-@login_required
-def settings():
-    return render_template('settings.html')
+@bp.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    flash('Logout successful!', 'success')
+    return redirect(url_for('routes.login'))
 
-@bp.route('/friends', methods=['GET'])
-@login_required
-def friends():
-    return render_template('friends.html')
 
-@bp.route('/analytics')
-@login_required
-def analytics():
-    return render_template('analytics.html')
+# ---------------------------------------------------------------------------------------------------------------------
+# User/Profile routes
+#
 
 @bp.route('/profile')
 @login_required
@@ -111,15 +81,61 @@ def profile():
     user = User.query.get(session['user_id'])
     return render_template('profile.html', user=user)
 
+
+@bp.route('/edit-profile', methods=['GET', 'PATCH'])
+@login_required
+def edit_profile():
+    if request.method == 'PATCH':
+        # Handle form submission (e.g., save updated profile data)
+        name = request.form.get('name')
+        email = request.form.get('email')
+        # Save the data (this is just a placeholder, implement actual services)
+        print(f"Updated Name: {name}, Updated Email: {email}")
+        return redirect('/profile')  # Redirect back to the profile page after saving
+
+    return render_template("edit_profile.html")
+
+
+@bp.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    return render_template('settings.html')
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Landing routes
+#
+
+@bp.route('/')
+def index():
+    return render_template("index.html")
+
+
+@bp.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template("dashboard.html")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Social routes
+#
+
+@bp.route('/friends', methods=['GET'])
+@login_required
+def friends():
+    return render_template('friends.html')
+
+
 @bp.route('/add-friend', methods=['GET', 'POST'])
 @login_required
 def add_friend():
     return render_template('add_friend.html')
 
 
-from app.services import Parser, registry, read_csv, save_to_string
-
-from matplotlib.pyplot import close
+# ---------------------------------------------------------------------------------------------------------------------
+# Business routes
+#
 
 @bp.route('/upload', methods=['GET', 'POST'])
 @login_required
@@ -143,7 +159,7 @@ def upload():
         plotter = registry.functions[plot_type]
 
         # TODO: Catch errors and report the message to the user
-        bound, unbound = plotter.bind_args(source = data, **spec)
+        bound, unbound = plotter.bind_args(source=data, **spec)
 
         if unbound:
             # TODO: Flash these messages to the user so that they can understand why their
@@ -165,26 +181,43 @@ def upload():
 @login_required
 def visualise():
     chart = None
-#
-# This just needs to be reworked 
-#
-#    if request.method == 'GET':
-#        # Handle visualization services here
-#        x_col = request.args.get('xCol')
-#        y_col = request.args.get('yCol')
-#        chart_type = request.args.get('chartType')
-#        title = request.args.get('title', 'Visualization')
-#        color = request.args.get('color', 'blue')
-#        grid = request.args.get('grid', '1') == '1'
-#        figsize = tuple(map(int, request.args.get('figsize', '10,6').split(',')))
-#
-#        # Generate the chart using your existing plotting functions
-#        if x_col and y_col and chart_type:
-#            if chart_type == 'line':
-#                chart = plots.plot_line(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
-#            elif chart_type == 'bar':
-#                chart = plots.plot_bar(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
-#            # Add other chart types here...
+
+    # This just needs to be reworked
+    #
+    #    if request.method == 'GET':
+    #        # Handle visualization services here
+    #        x_col = request.args.get('xCol')
+    #        y_col = request.args.get('yCol')
+    #        chart_type = request.args.get('chartType')
+    #        title = request.args.get('title', 'Visualization')
+    #        color = request.args.get('color', 'blue')
+    #        grid = request.args.get('grid', '1') == '1'
+    #        figsize = tuple(map(int, request.args.get('figsize', '10,6').split(',')))
+    #
+    #        # Generate the chart using your existing plotting functions
+    #        if x_col and y_col and chart_type:
+    #            if chart_type == 'line':
+    #                chart = plots.plot_line(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
+    #            elif chart_type == 'bar':
+    #                chart = plots.plot_bar(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
+    #            # Add other chart types here...
 
     return render_template('visualise.html', chart=chart)
 
+
+@bp.route('/analytics')
+@login_required
+def analytics():
+    return render_template('analytics.html')
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Extras
+#
+
+@bp.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
