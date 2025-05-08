@@ -13,8 +13,6 @@ instance/
 *.db
 *.sqlite
 *.sqlite3
-app/users.db
-app/app.db
 
 # Test coverage files
 .coverage
@@ -23,16 +21,16 @@ app/app.db
 dataFrame.csv
 
 # Static files
-static/*.png
+app/static/*.png
 app/static/css/output.css
 
 # Node.js (Tailwind)
 node_modules/
 package-lock.json
 
-# VS Code config
+# IDE config files
 .vscode/
-.idea
+.idea/
 
 # OS system junk
 .DS_Store

@@ -41,19 +41,30 @@ The `output.css` file is ignored in the repository and must be generated locally
 
    This will create the `output.css` file in the `static/css` directory.
 
-### 4.5. Initialising the Database
+### 5. Setting Up the Database
 
 We use **Flask-SQLAlchemy** to manage the database.
 
 To create the required tables, run the following once:
-
 ```bash
-python init_database.py
+flask db init
 ```
 
-### 5. Running the Application
+To update the database, run the following:
 ```bash
-flask run
+flask db migrate -m "migration message" # if you are the one who made changes
+flask db upgrade
+```
+
+### 6. Running the Application
+In order for the application to run, you will need to have a secret key set within the environment. You can set one using the following:
+```bash
+export SECRET_KEY='your-key-here'
+```
+
+Once that has been done, run the `main.py` file:
+```bash
+python main.py
 ```
 
 ## Testing
@@ -87,7 +98,7 @@ Each test should be specific and cover a narrow range of expected behaviour, and
 name explaining what the test is trying to do.
 
 You should aim for high coverage in the `coverage report`. To find out what you haven't tested, look
-at the the `Missing` column of the output to find what lines aren't covered. If something doesn't make
+at the `Missing` column of the output to find what lines aren't covered. If something doesn't make
 sense to be tested, add `# pragma: no cover` after the line.
 
 ## Requirements
