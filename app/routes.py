@@ -11,6 +11,21 @@ from app.forms import SignupForm, LoginForm, UploadForm
 from app.services import Parser, registry, read_csv, save_to_string
 
 
+bp = Blueprint('routes', __name__)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Utilities
+#
+
+@bp.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
+
 # Login required decorator
 def login_required(f):
     @wraps(f)
@@ -21,9 +36,6 @@ def login_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
-
-
-bp = Blueprint('routes', __name__)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -211,15 +223,3 @@ def visualise():
 @login_required
 def analytics():
     return render_template('analytics.html')
-
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Extras
-#
-
-@bp.after_request
-def add_header(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
