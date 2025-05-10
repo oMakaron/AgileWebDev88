@@ -39,7 +39,7 @@ The `output.css` file is ignored in the repository and must be generated locally
 2. **Generate the Output CSS File**:  
    Run the following command to generate `static/css/output.css`:
    ```bash
-   npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch
+   npx tailwindcss -i app/static/css/input.css -o app/static/css/output.css --watch
    ```
 
    This will create the `output.css` file in the `static/css` directory.
