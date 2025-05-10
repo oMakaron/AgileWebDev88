@@ -12,6 +12,9 @@ git clone https://github.com/oMakaron/AgileWebDev88.git
 cd AgileWebDev88
 ```
 
+### 2. Set up the project
+You can either use the install script `setup.py` or follow the below instructions:
+
 ### 2. Setting up a Virtual Environment
 ```bash
 python3 -m venv venv
@@ -45,9 +48,9 @@ The `output.css` file is ignored in the repository and must be generated locally
 
 We use **Flask-SQLAlchemy** to manage the database.
 
-To create the required tables, run the following once:
+First, we need to let flask know where the app is:
 ```bash
-flask db init
+export FLASK_APP=main.py
 ```
 
 To update the database, run the following:
@@ -57,7 +60,7 @@ flask db upgrade
 ```
 
 ### 6. Running the Application
-In order for the application to run, you will need to have a secret key set within the environment. You can set one using the following:
+In order for the application to run, you will need to have a secret key set within the environment. You can set one using the following if you didn't set one with the install script:
 ```bash
 export SECRET_KEY='your-key-here'
 ```
