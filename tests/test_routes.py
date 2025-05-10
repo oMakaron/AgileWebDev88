@@ -1,8 +1,8 @@
 from unittest import TestCase
 from io import BytesIO
 
-from app import app
-
+from app import create_app
+from config import TestConfig
 
 Data = str | int | float
 
@@ -15,9 +15,8 @@ def make_csv(name: str, data: list[list[Data]]) -> tuple[BytesIO, str]:
 class Test(TestCase):
 
     def setUp(self) -> None:
-        app.config['TESTING'] = True
-        app.config['WTF_CSRF_ENABLED'] = False
-        self.client = app.test_client()
+        self.app = create_app(TestConfig)
+        self.client = self.app.test_client()
 
     def test_index(self) -> None:
         result = self.client.get('/')
@@ -39,4 +38,3 @@ class Test(TestCase):
 
         self.assertEqual(200, response.status_code)
         self.assertIn(b"<img src=", response.data)
-

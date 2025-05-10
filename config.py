@@ -15,4 +15,6 @@ class DeploymentConfig(Config):
 
 class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory"
+    SECRET_KEY = "very-secret-key"
+    WTF_CSRF_ENABLED = False
     TESTING = True
