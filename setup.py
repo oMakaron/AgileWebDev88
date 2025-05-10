@@ -22,15 +22,20 @@ def main():
     check_call([str(pip_exec), "install", "-r", "requirements.txt"])
 
     print("Installing Tailwind...")
-    if not which("npm"):
+    if not (npm_exec := which("npm")):
         print("npm is not installed. Please install it and rerun this script.")
         return
 
-    check_call(["npm", "install", "-D", "tailwindcss@3"])
+
+    check_call([npm_exec, "install", "-D", "tailwindcss@3"])
 
     print("Building CSS...")
+    if not (npx_exec := which("npx")):
+        print("npx is not installed. Please install it and rerun this script.")
+        return
+
     check_call([
-        "npx", "tailwindcss",
+        npx_exec, "tailwindcss",
         "-i", "app/static/css/input.css",
         "-o", "app/static/css/output.css"
     ])
@@ -40,7 +45,7 @@ def main():
         print("Creating .env file...")
         secret_key = input("Please enter your secret key: ")
         env_path.write_text(
-            f"FLASK_APP=app.py\n"
+            f"FLASK_APP=main.py\n"
             f"FLASK_SECRET_KEY=\"{secret_key}\"\n"
         )
     else:
