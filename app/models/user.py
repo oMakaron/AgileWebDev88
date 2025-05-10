@@ -1,15 +1,21 @@
-from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 
-db = SQLAlchemy()
+from ..extensions import db
+from .base import Base
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+
+class User(Base):
+    __tablename__ = 'users'
+
     fullname = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    files = db.relationship('File', backref='owner')
+    charts = db.relationship('Chart', backref='owner')
+
+    shared_files = db.relationship('SharedFile', back_populates='user')
+    shared_charts = db.relationship('SharedChart', back_populates='user')
 
     def set_password(self, password):
         self.password = generate_password_hash(password)

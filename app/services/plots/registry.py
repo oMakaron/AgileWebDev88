@@ -1,8 +1,6 @@
 from typing import Any, Callable
 from inspect import Parameter, signature
 
-from matplotlib.figure import Figure
-
 
 def unbound_error(param_name: str, f_name: str) -> str:
     return f"Couldn't find parameter {param_name!r} in {f_name}"
@@ -25,13 +23,13 @@ class BindError(Exception):
 
 
 class PlotterFunction:
-    function: Callable[..., Figure]
+    function: Callable
     required: list[str] # parameters that don't have a default value will be required
     optional: list[str] # parameters that do have a default value will be optional
     combined: list[str] # contains the total list of parameter names
     annotations: dict[str, Callable] # maps between parameter name and type
 
-    def __init__(self, function: Callable[..., Figure], remaps: dict[Callable, Callable]) -> None:
+    def __init__(self, function: Callable, remaps: dict[Callable, Callable]) -> None:
         sig = signature(function)
 
         self.function = function
@@ -65,7 +63,8 @@ class PlotterFunction:
 
     def _cast(self, name: str, value: Any, errors: list) -> Any:
         try:
-            return self.annotations[name](value)
+            cast_func = self.annotations[name]
+            return cast_func(value) if cast_func is not Parameter.empty else value
         except (TypeError, ValueError):
             errors.append((value, name))
             return None
@@ -83,5 +82,9 @@ class PlotRegistry:
         def register(function: Callable) -> Callable:
             self.functions[name] = PlotterFunction(function, self._remaps)
             return function
+
+        if name in self.functions:
+            raise RuntimeError(f"Cannot register function as there is already a function registered by {name!r}")
+
         return register
 
