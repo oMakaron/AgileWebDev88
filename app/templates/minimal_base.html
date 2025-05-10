@@ -16,7 +16,8 @@
   {# —————————————— #}
   {# TOAST CONTAINER #}
   {% with messages = get_flashed_messages(with_categories=True) %}
-    {% if messages %}
+  {% for category, message in messages %}
+  {% if category == 'success' %}
       <div
         x-data="{ show: true }"
         x-init="setTimeout(() => show = false, 10000)"
@@ -33,16 +34,11 @@
       >
         <div class="flex justify-between items-center">
           <div class="text-green-700 text-sm font-medium">
-            {% for category, message in messages %}
-              {% if category == 'success' %}
-                {{ message }}
-              {% endif %}
-            {% endfor %}
+            {{ message }}
           </div>
-          <button
-            @click="show = false"
-            class="ml-4 text-gray-400 hover:text-gray-600 font-bold text-lg leading-none"
-          >&times;</button>
+          <button @click="show = false" class="ml-4 text-gray-400 hover:text-gray-600 font-bold text-lg leading-none">
+            &times;
+          </button>
         </div>
 
         <!-- progress bar -->
@@ -51,6 +47,7 @@
         </div>
       </div>
     {% endif %}
+  {% endfor %}
   {% endwith %}
 
 </body>
