@@ -52,7 +52,7 @@ def main():
         print(".env file already exists.")
 
     print("Initializing database...")
-    check_call([str(flask_exec), "db", "upgrade"])
+    check_call([str(flask_exec), "--app=app:cli_app", "db", "upgrade"])
 
     print("Setup complete.")
 

@@ -1,7 +1,7 @@
 from typing import Type
 
 from flask import Flask
-from config import Config
+from config import Config, DeploymentConfig
 from .extensions import db, migrate
 
 
@@ -19,3 +19,6 @@ def create_app(configuration: Type[Config]) -> Flask:
         app.register_blueprint(bp)
 
     return app
+
+def cli_app():
+    return create_app(DeploymentConfig)
