@@ -6,7 +6,7 @@ default_db_location = 'sqlite:///' + path.join(basedir, 'app.db')
 
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = getenv('SECRET_KEY')
+    SECRET_KEY = getenv('FLASK_SECRET_KEY')
 
 
 class DeploymentConfig(Config):
