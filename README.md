@@ -62,7 +62,7 @@ flask db upgrade
 ### 6. Running the Application
 In order for the application to run, you will need to have a secret key set within the environment. You can set one using the following if you didn't set one with the install script:
 ```bash
-export SECRET_KEY='your-key-here'
+export FLASK_SECRET_KEY='your-key-here'
 ```
 
 Once that has been done, run the `main.py` file:
