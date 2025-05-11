@@ -1,30 +1,140 @@
-from flask import Blueprint, Response
+from os import path
+
+from flask import Blueprint, Response, abort, jsonify, request
+from werkzeug.wrappers import response
+
+from app.services.plots.helpers import read_csv, save_to_string
+from app.services.plots.registry import BindError
+from app.services.specifier.parser import ParseError
+
+from ..models import Chart, SharedChart
+from ..services import Parser, registry
+from ..extensions import db
 
 
 charts = Blueprint('charts', __name__)
 
+CURRENT_USER_ID = 1
+UPLOADS_FOLDER = path.join("app", "uploads")
+
+
+def make_response_from_chart(chart: Chart, status: int = 200) -> Response:
+    response = jsonify({
+        'id': chart.id,
+        'name': chart.name,
+        'file_id': chart.file_id,
+        'spec': chart.spec,
+    })
+    response.status_code = status
+    return response
+
 
 @charts.route('/', methods=['GET'])
 def get_all_charts() -> Response:
-    ...
+    charts = Chart.query.filter_by(owner_id=CURRENT_USER_ID).all()
+    return jsonify([{ 'id': chart.id, 'name': chart.name } for chart in charts])
 
 
 @charts.route('/', methods=['POST'])
 def make_new_chart() -> Response:
-    ...
+    data = request.get_json()
+    name, file_id, spec = data.get('name'), data.get('file_id'), data.get('spec')
+
+    if not (name and file_id and spec):
+        abort(400, desctiption="Missing required fiels.")
+
+    new_chart = Chart(name=name, file_id=file_id, owner_id=CURRENT_USER_ID) # type: ignore
+    db.session.add(new_chart)
+    db.session.commit()
+
+    return make_response_from_chart(new_chart, 201)
 
 
 @charts.route('/<int:chart_id>/', methods=['GET'])
 def get_chart(chart_id: int) -> Response:
-    ...
+    chart = Chart.query.get_or_404(chart_id)
+
+    if chart.owner_id != CURRENT_USER_ID:
+        abort(403, description="You do not have permission to access this chart.")
+
+    return make_response_from_chart(chart)
 
 
 @charts.route('/<int:chart_id>/', methods=['PUT'])
 def edit_chart(chart_id: int) -> Response:
-    ...
+    chart = Chart.query.get_or_404(chart_id)
+
+    if chart.owner_id != CURRENT_USER_ID:
+        abort(403, description="You do not have permission to edit this chart.")
+
+    data = request.get_json()
+
+    chart.name = data.get('name', chart.name)
+    chart.file_id = data.get('file_id', chart.file_id)
+    chart.spec = data.get('spec', chart.spec)
+
+    db.session.commit()
+
+    return make_response_from_chart(chart)
+
+
+@charts.route('/<int:chart_id>/', methods=['DELETE'])
+def delete_chart(chart_id: int) -> Response:
+    chart = Chart.query.get_or_404(chart_id)
+
+    if chart.owner_id != CURRENT_USER_ID:
+        abort(403, description="You do not have permission to delete this chart.")
+
+    db.session.delete(chart)
+    db.session.commit()
+
+    response = jsonify({'message': 'Chart deleted successfully.'})
+    response.status_code = 200
+
+    return response
 
 
 @charts.route('/<int:chart_id>/view/', methods=['GET'])
 def get_chart_view(chart_id: int) -> Response:
-    ...
+    image_uri = Chart.query.get_or_404(chart_id)
+
+    if image_uri.owner_id != CURRENT_USER_ID and not any(share.user_id == CURRENT_USER_ID for share in image_uri.shared_with):
+        abort(403, description="You do not have permission to view this chart.")
+
+    try:
+        parsed_args = Parser.parse_string(image_uri.spec)
+    except ParseError as error:
+        response = jsonify({ 'error': 'Poorly formatted chart spec.', 'details': str(error) })
+        response.status_code = 400
+        return response
+
+    chart_type = parsed_args.pop('type')
+    chart_type = chart_type if not isinstance(chart_type, list) else chart_type[0]
+
+    file_path = path.join(UPLOADS_FOLDER, f"{image_uri.file_id}.csv")
+    if not path.exists(file_path):
+        abort(404, description="File could not be located internally.")
+
+    with open(file_path, "r") as file:
+        data_frame = read_csv(file)
+
+    plotter = registry.functions[chart_type]
+
+    try:
+        bound, unbound = plotter.bind_args(source=data_frame, **parsed_args)
+    except BindError as error:
+        response = jsonify({
+            'error': 'Chart spec is missing required arguments.',
+            'missing': error.missing(),
+            'unbound': error.unbound(),
+        })
+        response.status_code = 400
+        return response
+
+    figure = plotter.function(**bound)
+    image = save_to_string(figure)
+
+    image_uri = f"data:image/png;base64,{image}"
+
+    return jsonify({'chart_view': image_uri, 'unbound': unbound})
 
