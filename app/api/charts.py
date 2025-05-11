@@ -91,13 +91,13 @@ def delete_chart(chart_id: int) -> Response:
 
 @charts.route('/<int:chart_id>/view/', methods=['GET'])
 def get_chart_view(chart_id: int) -> Response:
-    image_uri = Chart.query.get_or_404(chart_id)
+    chart = Chart.query.get_or_404(chart_id)
 
-    if image_uri.owner_id != CURRENT_USER_ID and not any(share.user_id == CURRENT_USER_ID for share in image_uri.shared_with):
+    if chart.owner_id != CURRENT_USER_ID and not any(share.user_id == CURRENT_USER_ID for share in chart.shared_with):
         abort(403, description="You do not have permission to view this chart.")
 
     try:
-        parsed_args = Parser.parse_string(image_uri.spec)
+        parsed_args = Parser.parse_string(chart.spec)
     except ParseError as error:
         response = jsonify({ 'error': 'Poorly formatted chart spec.', 'details': str(error) })
         response.status_code = 400
@@ -106,7 +106,7 @@ def get_chart_view(chart_id: int) -> Response:
     chart_type = parsed_args.pop('type')
     chart_type = chart_type if not isinstance(chart_type, list) else chart_type[0]
 
-    file_path = path.join(UPLOADS_FOLDER, f"{image_uri.file_id}.csv")
+    file_path = path.join(UPLOADS_FOLDER, f"{chart.file_id}.csv")
     if not path.exists(file_path):
         abort(404, description="File could not be located internally.")
 

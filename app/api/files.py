@@ -53,6 +53,9 @@ def make_new_file() -> Response:
 def get_file(file_id: int) -> Response:
     file = File.query.get_or_404(file_id)
 
+    if file.owner_id != CURRENT_USER_ID and not any(share.user_id == CURRENT_USER_ID for share in file.shared_with):
+        abort(403, description="You do not have access to this file.")
+
     file_path = path.join(UPLOADS_FOLDER, f"{file_id}.csv")
     if not path.exists(file_path):
         response = jsonify({'error': 'File content is missing.'})
@@ -73,6 +76,9 @@ def get_file(file_id: int) -> Response:
 @files.route('/<int:file_id>/', methods=["PUT"])
 def edit_file(file_id: int) -> Response:
     file = File.query.get_or_404(file_id)
+
+    if file.owner_id != CURRENT_USER_ID:
+        abort(403, "You do not have permission to edit this file.")
 
     new_name = request.form.get('name')
     new_file = request.files.get('file')
@@ -99,6 +105,9 @@ def edit_file(file_id: int) -> Response:
 @files.route('/<int:file_id>/', methods=["DELETE"])
 def delete_file(file_id: int) -> Response:
     file = File.query.get_or_404(file_id)
+
+    if file.owner_id != CURRENT_USER_ID:
+        abort(403, "You do not have permission to delete this file.")
 
     file_path = path.join(UPLOADS_FOLDER, f"{file_id}.csv")
 
