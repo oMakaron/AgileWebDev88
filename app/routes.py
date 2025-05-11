@@ -47,11 +47,17 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and check_password_hash(user.password, form.password.data):
-            session['user_id'] = user.id
-            flash('Login successful!', 'success')
-            return redirect(url_for('routes.dashboard'))
-        flash('Invalid email or password.', 'error')
+        if not user:
+            flash('This email is not registered.', 'error')
+            return render_template('login.html', form=form)
+        if not check_password_hash(user.password, form.password.data):
+            flash('Incorrect password.', 'error')
+            return render_template('login.html', form=form)
+        
+        session['user_id'] = user.id
+        flash('Login successful!', 'success')
+        return redirect(url_for('dashboard'))
+        
     return render_template('login.html', form=form)
 
 
