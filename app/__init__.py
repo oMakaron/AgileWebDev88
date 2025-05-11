@@ -18,9 +18,10 @@ def create_app(configuration: Type[Config]) -> Flask:
         from app.routes import bp
         app.register_blueprint(bp)
 
-        from app.api import files, charts
+        from app.api import files, charts, plots
         app.register_blueprint(files)
         app.register_blueprint(charts)
+        app.register_blueprint(plots)
 
 
     return app
