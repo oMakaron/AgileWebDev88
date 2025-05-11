@@ -1,5 +1,5 @@
 from functools import wraps
-from io import BytesIO
+from io import BytesIO, StringIO
 import pandas as pd
 import json
 
@@ -230,10 +230,14 @@ def generate_graph():
                     if val:
                         args[attr] = val
 
+            # Generate and save chart
             bound, _ = plotter.bind_args(**args)
             fig = plotter.function(**bound)
             chart = f"data:image/png;base64,{save_to_string(fig)}"
             close(fig)
+
+            # Remove non-serializable DataFrame before saving
+            args.pop('source', None)
 
             # Save to Chart DB
             from app.models import Chart
