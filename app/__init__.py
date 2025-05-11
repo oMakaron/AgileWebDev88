@@ -1,7 +1,7 @@
 from typing import Type
 
 from flask import Flask
-from config import Config
+from config import Config, DeploymentConfig
 from .extensions import db, migrate
 
 
