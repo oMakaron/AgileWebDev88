@@ -2,7 +2,7 @@ from typing import Type
 
 from flask import Flask
 from config import Config, DeploymentConfig
-from .extensions import db, migrate
+from app.extensions import db, migrate
 
 
 def create_app(configuration: Type[Config]) -> Flask:
@@ -17,6 +17,11 @@ def create_app(configuration: Type[Config]) -> Flask:
 
         from app.routes import bp
         app.register_blueprint(bp)
+
+        from app.api import files, charts
+        app.register_blueprint(files)
+        app.register_blueprint(charts)
+
 
     return app
 
