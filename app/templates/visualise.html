@@ -31,6 +31,9 @@
       </form>
 
       {% if show_config %}
+      <p class="text-sm text-gray-600">
+        <strong>Uploaded file:</strong> {{ uploaded_filename }}
+      </p>
       <!-- 2) Chart config form -->
       <form method="POST" class="space-y-4 mt-6">
         {{ chart_form.hidden_tag() }}
