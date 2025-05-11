@@ -57,7 +57,7 @@ def login():
         
         session['user_id'] = user.id
         flash('Login successful!', 'success')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('routes.dashboard'))
         
     return render_template('login.html', form=form)
 
@@ -103,18 +103,29 @@ def profile():
     return render_template('profile.html', user=user)
 
 
-@bp.route('/edit-profile', methods=['GET', 'PATCH'])
+from app.forms import EditProfileForm
+
+@bp.route('/edit-profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    if request.method == 'PATCH':
-        # Handle form submission (e.g., save updated profile data)
-        name = request.form.get('name')
-        email = request.form.get('email')
-        # Save the data (this is just a placeholder, implement actual services)
-        print(f"Updated Name: {name}, Updated Email: {email}")
-        return redirect('/profile')  # Redirect back to the profile page after saving
+    user = User.query.get(session['user_id'])
+    form = EditProfileForm()
 
-    return render_template("edit_profile.html")
+    if form.validate_on_submit():
+        user.fullname = form.name.data
+        user.email = form.email.data
+        if form.password.data:
+            user.set_password(form.password.data)
+
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('routes.profile'))
+
+    form.name.data = user.fullname
+    form.email.data = user.email
+
+    return render_template("edit_profile.html", form=form)
+
 
 
 @bp.route('/settings', methods=['GET', 'POST'])
