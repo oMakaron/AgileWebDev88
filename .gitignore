@@ -17,11 +17,7 @@ instance/
 # Test coverage files
 .coverage
 
-# Generate files
-dataFrame.csv
-
 # Static files
-app/static/*.png
 app/static/css/output.css
 
 # Node.js (Tailwind)
