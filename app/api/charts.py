@@ -1,14 +1,9 @@
 from os import path
 
 from flask import Blueprint, Response, abort, jsonify, request
-from werkzeug.wrappers import response
-
-from app.services.plots.helpers import read_csv, save_to_string
-from app.services.plots.registry import BindError
-from app.services.specifier.parser import ParseError
 
 from ..models import Chart, SharedChart
-from ..services import Parser, registry
+from ..services import Parser, ParseError, BindError, registry, read_csv, save_to_string
 from ..extensions import db
 
 
