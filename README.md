@@ -12,6 +12,9 @@ git clone https://github.com/oMakaron/AgileWebDev88.git
 cd AgileWebDev88
 ```
 
+### 2. Set up the project
+You can either use the install script `setup.py` or follow the below instructions:
+
 ### 2. Setting up a Virtual Environment
 ```bash
 python3 -m venv venv
@@ -36,24 +39,35 @@ The `output.css` file is ignored in the repository and must be generated locally
 2. **Generate the Output CSS File**:  
    Run the following command to generate `static/css/output.css`:
    ```bash
-   npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch
+   npx tailwindcss -i app/static/css/input.css -o app/static/css/output.css --watch
    ```
 
    This will create the `output.css` file in the `static/css` directory.
 
-### 4.5. Initialising the Database
+### 5. Setting Up the Database
 
 We use **Flask-SQLAlchemy** to manage the database.
 
-To create the required tables, run the following once:
-
+First, we need to let flask know where the app is:
 ```bash
-python init_database.py
+export FLASK_APP=main.py
 ```
 
-### 5. Running the Application
+To update the database, run the following:
 ```bash
-flask run
+flask db migrate -m "migration message" # if you are the one who made changes
+flask db upgrade
+```
+
+### 6. Running the Application
+In order for the application to run, you will need to have a secret key set within the environment. You can set one using the following if you didn't set one with the install script:
+```bash
+export FLASK_SECRET_KEY='your-key-here'
+```
+
+Once that has been done, run the `main.py` file:
+```bash
+python main.py
 ```
 
 ## Testing
@@ -79,7 +93,7 @@ Tests follow this template:
 class Test(TestCase):
 
     def test_something(self) -> None:
-        # ... test logic here ...
+        # ... test services here ...
         self.assertEqual(expected, given)
 ```
 
@@ -87,7 +101,7 @@ Each test should be specific and cover a narrow range of expected behaviour, and
 name explaining what the test is trying to do.
 
 You should aim for high coverage in the `coverage report`. To find out what you haven't tested, look
-at the the `Missing` column of the output to find what lines aren't covered. If something doesn't make
+at the `Missing` column of the output to find what lines aren't covered. If something doesn't make
 sense to be tested, add `# pragma: no cover` after the line.
 
 ## Requirements
