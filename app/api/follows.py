@@ -1,4 +1,4 @@
-from flask import Blueprint, Response, jsonify, abort, request
+from flask import Blueprint, Response, jsonify, request
 
 from .utils import require_login, get_user
 from ..extensions import db
