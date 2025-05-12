@@ -1,6 +1,6 @@
 from os import abort, path, remove
 
-from flask import Blueprint, Response, abort, jsonify, request
+from flask import Blueprint, Response, abort, jsonify, request, session
 
 from ..models import File
 from ..extensions import db
@@ -9,18 +9,32 @@ from ..extensions import db
 files = Blueprint('files', __name__)
 
 
-CURRENT_USER_ID = 1
+def get_current_user() -> int:
+    return session.get('user_id', -1)
+
 UPLOADS_FOLDER = path.join("app", "uploads")
 
 
 @files.route('/', methods=["GET"])
 def get_all_files() -> Response:
-    files = File.query.filter_by(owner_id=CURRENT_USER_ID).all()
+
+    if (user_id := get_current_user()) == -1:
+        response = jsonify([{'error': 'must be logged in.'}])
+        response.status_code = 401
+        return response
+
+    files = File.query.filter_by(owner_id=user_id).all()
     return jsonify([{'id': file.id, 'name': file.name} for file in files])
 
 
 @files.route('/', methods=["POST"])
 def make_new_file() -> Response:
+
+    if (user_id := get_current_user()) == -1:
+        response = jsonify([{'error': 'must be logged in.'}])
+        response.status_code = 401
+        return response
+
     file = request.files.get('file')
     name = request.form.get('name')
 
@@ -28,7 +42,7 @@ def make_new_file() -> Response:
         abort(400, desctiption="Missing required fiels.")
 
     try:
-        new_file = File(name=name, owner_id=CURRENT_USER_ID) # type: ignore
+        new_file = File(name=name, owner_id=user_id) # type: ignore
         db.session.add(new_file)
         db.session.commit()
 
@@ -51,9 +65,15 @@ def make_new_file() -> Response:
 
 @files.route('/<int:file_id>/', methods=["GET"])
 def get_file(file_id: int) -> Response:
+
+    if (user_id := get_current_user()) == -1:
+        response = jsonify([{'error': 'must be logged in.'}])
+        response.status_code = 401
+        return response
+
     file = File.query.get_or_404(file_id)
 
-    if file.owner_id != CURRENT_USER_ID and not any(share.user_id == CURRENT_USER_ID for share in file.shared_with):
+    if file.owner_id != user_id and not any(share.user_id == user_id for share in file.shared_with):
         abort(403, description="You do not have access to this file.")
 
     file_path = path.join(UPLOADS_FOLDER, f"{file_id}.csv")
@@ -75,9 +95,15 @@ def get_file(file_id: int) -> Response:
 
 @files.route('/<int:file_id>/', methods=["PUT"])
 def edit_file(file_id: int) -> Response:
+
+    if (user_id := get_current_user()) == -1:
+        response = jsonify([{'error': 'must be logged in.'}])
+        response.status_code = 401
+        return response
+
     file = File.query.get_or_404(file_id)
 
-    if file.owner_id != CURRENT_USER_ID:
+    if file.owner_id != user_id:
         abort(403, "You do not have permission to edit this file.")
 
     new_name = request.form.get('name')
@@ -104,9 +130,15 @@ def edit_file(file_id: int) -> Response:
 
 @files.route('/<int:file_id>/', methods=["DELETE"])
 def delete_file(file_id: int) -> Response:
+
+    if (user_id := get_current_user()) == -1:
+        response = jsonify([{'error': 'must be logged in.'}])
+        response.status_code = 401
+        return response
+
     file = File.query.get_or_404(file_id)
 
-    if file.owner_id != CURRENT_USER_ID:
+    if file.owner_id != user_id:
         abort(403, "You do not have permission to delete this file.")
 
     file_path = path.join(UPLOADS_FOLDER, f"{file_id}.csv")
