@@ -104,8 +104,13 @@ def get_chart_view(chart_id: int) -> Response:
     if not path.exists(file_path):
         abort(404, description="File could not be located internally.")
 
-    with open(file_path, "r") as file:
-        data_frame = read_csv(file)
+    try:
+        with open(file_path, "r") as file:
+            data_frame = read_csv(file)
+    except:
+        response = jsonify({'error': 'Internal server error.'})
+        response.status_code = 500
+        return response
 
     plotter = registry.functions[chart_type]
 
