@@ -1,19 +1,14 @@
 from os import path
 
-from flask import Blueprint, Response, abort, jsonify, request, session
+from flask import Blueprint, Response, abort, jsonify, request
 
 from ..models import Chart, SharedChart
 from ..services import Parser, ParseError, BindError, registry, read_csv, save_to_string
 from ..extensions import db
+from .utils import require_login, get_user, UPLOADS_FOLDER
 
 
 charts = Blueprint('charts', __name__)
-
-
-def get_current_user() -> int:
-    return session.get('user_id', -1)
-
-UPLOADS_FOLDER = path.join("app", "uploads")
 
 
 def make_response_from_chart(chart: Chart, status: int = 200) -> Response:
@@ -28,29 +23,22 @@ def make_response_from_chart(chart: Chart, status: int = 200) -> Response:
 
 
 @charts.route('/', methods=['GET'])
+@require_login
 def get_all_charts() -> Response:
-
-    if (user_id := get_current_user()) == -1:
-        response = jsonify([{'error': 'must be logged in.'}])
-        response.status_code = 401
-        return response
-
-    charts = Chart.query.filter_by(owner_id=user_id).all()
+    charts = Chart.query.filter_by(owner_id=get_user()).all()
     return jsonify([{ 'id': chart.id, 'name': chart.name } for chart in charts])
 
 
 @charts.route('/', methods=['POST'])
+@require_login
 def make_new_chart() -> Response:
-    if (user_id := get_current_user()) == -1:
-        return jsonify([{'error': 'must be logged in.'}])
-
     data = request.get_json()
     name, file_id, spec = data.get('name'), data.get('file_id'), data.get('spec')
 
     if not (name and file_id and spec):
         abort(400, description="Missing required fields.")
 
-    new_chart = Chart(name=name, file_id=file_id, spec=spec, owner_id=user_id) # type: ignore
+    new_chart = Chart(name=name, file_id=file_id, spec=spec, owner_id=get_user()) # type: ignore
     db.session.add(new_chart)
     db.session.commit()
 
@@ -58,35 +46,22 @@ def make_new_chart() -> Response:
 
 
 @charts.route('/<int:chart_id>/', methods=['GET'])
+@require_login
 def get_chart(chart_id: int) -> Response:
-
-    if (user_id := get_current_user()) == -1:
-        response = jsonify([{'error': 'must be logged in.'}])
-        response.status_code = 401
-        return response
-
-
     chart = Chart.query.get_or_404(chart_id)
 
-    if chart.owner_id != user_id:
+    if chart.owner_id != get_user():
         abort(403, description="You do not have permission to access this chart.")
 
     return make_response_from_chart(chart)
 
 
 @charts.route('/<int:chart_id>/', methods=['PUT'])
+@require_login
 def edit_chart(chart_id: int) -> Response:
-
-    if (user_id := get_current_user()) == -1:
-        response = jsonify([{'error': 'must be logged in.'}])
-        response.status_code = 401
-        return response
-
-
-
     chart = Chart.query.get_or_404(chart_id)
 
-    if chart.owner_id != user_id:
+    if chart.owner_id != get_user():
         abort(403, description="You do not have permission to edit this chart.")
 
     data = request.get_json()
@@ -101,16 +76,11 @@ def edit_chart(chart_id: int) -> Response:
 
 
 @charts.route('/<int:chart_id>/', methods=['DELETE'])
+@require_login
 def delete_chart(chart_id: int) -> Response:
-
-    if (user_id := get_current_user()) == -1:
-        response = jsonify([{'error': 'must be logged in.'}])
-        response.status_code = 401
-        return response
-
     chart = Chart.query.get_or_404(chart_id)
 
-    if chart.owner_id != user_id:
+    if chart.owner_id != get_user():
         abort(403, description="You do not have permission to delete this chart.")
 
     db.session.delete(chart)
@@ -123,16 +93,11 @@ def delete_chart(chart_id: int) -> Response:
 
 
 @charts.route('/<int:chart_id>/view/', methods=['GET'])
+@require_login
 def get_chart_view(chart_id: int) -> Response:
-
-    if (user_id := get_current_user()) == -1:
-        response = jsonify([{'error': 'must be logged in.'}])
-        response.status_code = 401
-        return response
-
     chart = Chart.query.get_or_404(chart_id)
 
-    if chart.owner_id != user_id and not any(share.user_id == user_id for share in chart.shared_with):
+    if chart.owner_id != get_user() and not any(share.user_id == get_user() for share in chart.shared_with):
         abort(403, description="You do not have permission to view this chart.")
 
     try:
