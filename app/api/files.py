@@ -1,4 +1,4 @@
-from os import abort, path, remove
+from os import path, remove
 
 from flask import Blueprint, Response, abort, jsonify, request
 
@@ -8,8 +8,6 @@ from .utils import require_login, get_user, UPLOADS_FOLDER
 
 
 files = Blueprint('files', __name__)
-
-
 
 
 @files.route('/', methods=["GET"])
@@ -26,7 +24,7 @@ def make_new_file() -> Response:
     name = request.form.get('name')
 
     if not (file and name):
-        abort(400, desctiption="Missing required fiels.")
+        abort(400, desctiption="Missing required fields.")
 
     try:
         new_file = File(name=name, owner_id=get_user()) # type: ignore
@@ -43,7 +41,7 @@ def make_new_file() -> Response:
 
         return response
 
-    except:
+    except Exception:
         db.session.rollback()
         response = jsonify({'error': 'Internal server error.'})
         response.status_code = 500
@@ -69,7 +67,7 @@ def get_file(file_id: int) -> Response:
             content = file.read()
         return Response(content, mimetype='text/csv')
 
-    except:
+    except Exception:
         response = jsonify({'error': 'Internal server error.'})
         response.status_code = 500
         return response
@@ -93,7 +91,7 @@ def edit_file(file_id: int) -> Response:
         db.session.commit()
         return jsonify({'message': 'File updated successfully.'})
 
-    except:
+    except Exception:
         db.session.rollback()
 
         response = jsonify({'error': 'Internal server error.'})
@@ -118,7 +116,7 @@ def delete_file(file_id: int) -> Response:
 
         return jsonify({'message': 'File deleted successfully.'})
 
-    except:
+    except Exception:
         db.session.rollback()
 
         response = jsonify({'error': 'Internal server error.'})

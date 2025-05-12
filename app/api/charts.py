@@ -107,7 +107,7 @@ def get_chart_view(chart_id: int) -> Response:
     try:
         with open(file_path, "r") as file:
             data_frame = read_csv(file)
-    except:
+    except Exception:
         response = jsonify({'error': 'Internal server error.'})
         response.status_code = 500
         return response
