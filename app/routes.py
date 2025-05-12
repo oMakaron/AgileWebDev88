@@ -56,8 +56,9 @@ def login():
 
         session['user_id'] = user.id
         flash('Login successful!', 'success')
-        return redirect(url_for('dashboard'))
 
+        return redirect(url_for('routes.dashboard'))
+ 
     return render_template('login.html', form=form)
 
 
