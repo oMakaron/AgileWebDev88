@@ -17,6 +17,9 @@ class User(Base):
     shared_files = db.relationship('SharedFile', back_populates='user')
     shared_charts = db.relationship('SharedChart', back_populates='user')
 
+    followers = db.relationship('Follows', foreign_keys="follows.following")
+    following = db.relationship('Follows', foreign_keys="follows.follower")
+
     def set_password(self, password):
         self.password = generate_password_hash(password)
 
