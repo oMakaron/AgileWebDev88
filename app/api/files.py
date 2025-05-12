@@ -27,14 +27,10 @@ def make_new_file() -> Response:
         abort(400, desctiption="Missing required fields.")
 
     try:
-        new_file = File(name=name, owner_id=get_user()) # type: ignore
+        file_data = file.read()
+        new_file = File(name=name, owner_id=get_user(), data = file_data) # type: ignore
         db.session.add(new_file)
         db.session.commit()
-
-        file_name = f"{new_file.id}.csv"
-        file_path = path.join(UPLOADS_FOLDER, file_name)
-
-        file.save(file_path)
 
         response = jsonify({'id': new_file.id})
         response.status_code = 201
@@ -56,15 +52,8 @@ def get_file(file_id: int) -> Response:
     if file.owner_id != get_user() and not any(share.user_id == get_user() for share in file.shared_with):
         abort(403, description="You do not have access to this file.")
 
-    file_path = path.join(UPLOADS_FOLDER, f"{file_id}.csv")
-    if not path.exists(file_path):
-        response = jsonify({'error': 'File content is missing.'})
-        response.status_code = 404
-        return response
-
     try:
-        with open(file_path, "r") as file:
-            content = file.read()
+        content = file.data
         return Response(content, mimetype='text/csv')
 
     except Exception:
@@ -85,8 +74,8 @@ def edit_file(file_id: int) -> Response:
         if new_name:
             file.name = new_name
         if new_file:
-            file_path = path.join(UPLOADS_FOLDER, f"{file_id}.csv")
-            new_file.save(file_path)
+            new_file_data = new_file.read()
+            file.data = new_file_data
 
         db.session.commit()
         return jsonify({'message': 'File updated successfully.'})
@@ -105,12 +94,7 @@ def edit_file(file_id: int) -> Response:
 def delete_file(file_id: int) -> Response:
     file = File.query.filter_by(id=file_id, owner_id=get_user()).first_or_404()
 
-    file_path = path.join(UPLOADS_FOLDER, f"{file_id}.csv")
-
     try:
-        if path.exists(file_path):
-            remove(file_path)
-
         db.session.delete(file)
         db.session.commit()
 

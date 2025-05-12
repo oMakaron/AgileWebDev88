@@ -1,8 +1,9 @@
 from os import path
 
 from flask import Blueprint, Response, abort, jsonify, request
+from io import BytesIO
 
-from ..models import Chart, SharedChart
+from ..models import Chart, SharedChart, File
 from ..services import Parser, ParseError, BindError, registry, read_csv, save_to_string
 from ..extensions import db
 from .utils import require_login, get_user, UPLOADS_FOLDER
@@ -99,14 +100,10 @@ def get_chart_view(chart_id: int) -> Response:
 
     chart_type = parsed_args.pop('type')
     chart_type = chart_type if not isinstance(chart_type, list) else chart_type[0]
-
-    file_path = path.join(UPLOADS_FOLDER, f"{chart.file_id}.csv")
-    if not path.exists(file_path):
-        abort(404, description="File could not be located internally.")
-
+    
     try:
-        with open(file_path, "r") as file:
-            data_frame = read_csv(file)
+        file = BytesIO(File.query.get_or_404(chart.file_id).data)
+        data_frame = read_csv(file)
     except Exception:
         response = jsonify({'error': 'Internal server error.'})
         response.status_code = 500
