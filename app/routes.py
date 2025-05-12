@@ -104,7 +104,10 @@ def index():
 @bp.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    from app.models import Chart
+    user_id = session.get('user_id')
+    charts = Chart.query.filter_by(owner_id=user_id).all()
+    return render_template("dashboard.html", charts=charts)
 
 
 @bp.route('/profile')
@@ -238,6 +241,7 @@ def generate_graph():
 
             # Remove non-serializable DataFrame before saving
             args.pop('source', None)
+            args['graph_type'] = plot_type
 
             # Save to Chart DB
             from app.models import Chart

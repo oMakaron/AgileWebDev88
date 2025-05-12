@@ -1,6 +1,10 @@
 from flask import Blueprint, jsonify, request, session
-from app.models import Chart
+from app.models import Chart, File
 from app.extensions import db
+from app.services import registry, read_csv, save_to_string
+from io import StringIO
+import pandas as pd
+import json
 
 chart_api = Blueprint('chart_api', __name__)
 
@@ -78,3 +82,39 @@ def delete_chart(chart_id):
     db.session.delete(chart)
     db.session.commit()
     return jsonify({'status': 'deleted'})
+
+
+@chart_api.route('/charts/<int:chart_id>/image')
+def chart_image(chart_id):
+    from app.models import Chart, File
+    user_id = session.get('user_id')
+    chart = Chart.query.get_or_404(chart_id)
+
+    if chart.owner_id != user_id:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    # Load the associated file from session-stored CSV string
+    file = File.query.get_or_404(chart.file_id)
+    csv_string = session.get('csv_string')  # ideally load from disk or DB in future
+    if not csv_string:
+        return jsonify({'error': 'CSV not in session'}), 400
+
+    df = pd.read_csv(StringIO(csv_string))
+    spec = json.loads(chart.spec)
+    graph_type = spec.get('graph_type')
+
+    if not graph_type:
+        return jsonify({'error': 'Missing graph_type in spec'}), 400
+
+    plotter = registry.functions.get(graph_type)
+    if not plotter:
+        return jsonify({'error': f'Unknown graph type: {graph_type}'}), 400
+
+    spec['source'] = df
+
+    plotter = registry.functions[spec.get('graph_type')]
+    bound, _ = plotter.bind_args(**spec)
+    fig = plotter.function(**bound)
+    chart_data = save_to_string(fig)
+
+    return jsonify({'img': f'data:image/png;base64,{chart_data}'})
