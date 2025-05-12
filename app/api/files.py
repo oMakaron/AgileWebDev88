@@ -78,7 +78,7 @@ def get_file(file_id: int) -> Response:
 @files.route('/<int:file_id>/', methods=["PUT"])
 @require_login
 def edit_file(file_id: int) -> Response:
-    file = File.query.filter_by(file_id=file_id, owner_id=get_user()).first_or_404()
+    file = File.query.filter_by(id=file_id, owner_id=get_user()).first_or_404()
 
     new_name = request.form.get('name')
     new_file = request.files.get('file')
@@ -105,7 +105,7 @@ def edit_file(file_id: int) -> Response:
 @files.route('/<int:file_id>/', methods=["DELETE"])
 @require_login
 def delete_file(file_id: int) -> Response:
-    file = File.query.filter_by(file_id=file_id, owner_id=get_user()).first_or_404()
+    file = File.query.filter_by(id=file_id, owner_id=get_user()).first_or_404()
 
     file_path = path.join(UPLOADS_FOLDER, f"{file_id}.csv")
 

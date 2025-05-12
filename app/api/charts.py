@@ -48,14 +48,14 @@ def make_new_chart() -> Response:
 @charts.route('/<int:chart_id>/', methods=['GET'])
 @require_login
 def get_chart(chart_id: int) -> Response:
-    chart = Chart.query.filter_by(chart_id=chart_id, owner_id=get_user()).first_or_404()
+    chart = Chart.query.filter_by(id=chart_id, owner_id=get_user()).first_or_404()
     return make_response_from_chart(chart)
 
 
 @charts.route('/<int:chart_id>/', methods=['PUT'])
 @require_login
 def edit_chart(chart_id: int) -> Response:
-    chart = Chart.query.filter_by(chart_id=chart_id, owner_id=get_user()).first_or_404()
+    chart = Chart.query.filter_by(id=chart_id, owner_id=get_user()).first_or_404()
 
     data = request.get_json()
 
@@ -71,7 +71,7 @@ def edit_chart(chart_id: int) -> Response:
 @charts.route('/<int:chart_id>/', methods=['DELETE'])
 @require_login
 def delete_chart(chart_id: int) -> Response:
-    chart = Chart.query.filter_by(chart_id=chart_id, owner_id=get_user()).first_or_404()
+    chart = Chart.query.filter_by(id=chart_id, owner_id=get_user()).first_or_404()
 
     db.session.delete(chart)
     db.session.commit()
