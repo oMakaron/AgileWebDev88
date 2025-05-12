@@ -12,6 +12,7 @@ class SharedFile(db.Model):
 
     user = db.relationship('User', back_populates='shared_files')
     file = db.relationship('File', back_populates='shared_with')
+    notifications = db.relationship("Notifications", back_populates="chart_notifications")
 
 
 class SharedChart(db.Model):
@@ -25,3 +26,4 @@ class SharedChart(db.Model):
 
     user = db.relationship('User', back_populates='shared_charts')
     chart = db.relationship('Chart', back_populates='shared_with')
+    notifications = db.relationship("Notifications", back_populates="file_notifications")
