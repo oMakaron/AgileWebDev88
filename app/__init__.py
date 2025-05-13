@@ -13,15 +13,16 @@ def create_app(configuration: Type[Config]) -> Flask:
     migrate.init_app(app, db)
 
     with app.app_context():
-        from app.models import User, File, Chart, SharedFile, SharedChart
+        from app.models import User, File, Chart, SharedFile, SharedChart, Follows
 
         from app.routes import bp
         app.register_blueprint(bp)
 
-        from app.api import files, charts, plots
+        from app.api import files, charts, plots, follows
         app.register_blueprint(files)
         app.register_blueprint(charts)
         app.register_blueprint(plots)
+        app.register_blueprint(follows)
 
 
     return app
