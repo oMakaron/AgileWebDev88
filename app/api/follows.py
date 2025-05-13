@@ -12,7 +12,7 @@ def get_follows() -> Response:
     type = request.args.get('type')
     user_id = get_user()
     user = User.query.get_or_404(user_id)
-    follow_dict = {'followers': user.followers, 'following': user.following}
+    follow_dict = {'followers': user.followers, 'following': user.following, 'friends': list(set(user.followers) & set(user.following))}
     
     if(type):
         try:
