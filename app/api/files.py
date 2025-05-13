@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, session
 from app.models import File
 from app.extensions import db
 
-file_api = Blueprint('file_api', __name__)
+file_api = Blueprint('file_api', __name__, url_prefix='/files')
 
 def require_user():
     user_id = session.get('user_id')

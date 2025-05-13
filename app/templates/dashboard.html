@@ -1,45 +1,54 @@
 {% extends "base.html" %}
 {% block title %}Dashboard – DataVizApp{% endblock %}
-{% block content %}
 
+{% block content %}
 <div class="min-h-screen bg-gray-100 p-6">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-gray-800">Your Dashboard</h1>
-    <button id="addChartBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">+ Add Chart</button>
+    <button id="addChartBtn"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      + Add Chart
+    </button>
   </div>
 
-  <div id="chartGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style="min-height: 500px;">
+  <div id="chartGrid"
+       class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+       style="min-height: 500px;">
     {% for chart in charts %}
-    <div class="chart-card bg-white rounded-lg shadow-md p-4 resize overflow-auto" data-chart-id="{{ chart.id }}">
+    <div class="chart-card bg-white rounded-lg shadow-md p-4 resize overflow-auto"
+         data-chart-id="{{ chart.id }}">
       <div class="flex justify-between items-center mb-2">
         <h2 class="font-semibold text-lg text-gray-700 truncate">{{ chart.name }}</h2>
         <button class="remove-btn text-sm text-red-500 hover:underline">Remove</button>
       </div>
-      <img src="{{ url_for('api.chart_api.chart_image', chart_id=chart.id) }}" alt="Chart" class="w-full rounded border" />
+      <img src="data:image/png;base64,{{ chart.image_data }}"
+           alt="Chart {{ chart.name }}"
+           class="w-full rounded border" />
     </div>
     {% endfor %}
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
-  const grid = document.getElementById('chartGrid');
-  Sortable.create(grid, {
+  // 1) Make the grid sortable
+  Sortable.create(document.getElementById('chartGrid'), {
     animation: 150,
     ghostClass: 'bg-yellow-50'
   });
 
-  document.querySelectorAll('.remove-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const card = e.target.closest('.chart-card');
-      card.remove();f
-    });
-  });
+  // 2) “Remove” only hides the card (does NOT delete from DB)
+  document.querySelectorAll('.remove-btn').forEach(btn =>
+    btn.addEventListener('click', e =>
+      e.target.closest('.chart-card').style.display = 'none'
+    )
+  );
 
+  // 3) Add Chart stub
   document.getElementById('addChartBtn').addEventListener('click', () => {
-    // Later we can open a modal to select from available charts
-    alert('To-do: Show chart picker modal');
+    alert('To-do: show chart picker modal');
   });
 </script>
-
 {% endblock %}
