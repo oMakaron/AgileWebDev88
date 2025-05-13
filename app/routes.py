@@ -128,10 +128,29 @@ def edit_profile():
 
 
 
-@bp.route('/settings', methods=['GET', 'POST'])
+@bp.route('/settings')
 @login_required
 def settings():
-    return render_template('settings.html')
+    user = db.session.get(User, session['user_id'])
+    return render_template('settings.html', user=user)
+
+@bp.route('/delete_account')
+@login_required
+def delete_account():
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id)  
+
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        session.clear()
+        flash("Account deleted successfully", "success")
+        return redirect(url_for('routes.login'))
+ 
+    else:
+        flash("User not found.")
+        return redirect(url_for('routes.settings'))
+
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -153,10 +172,11 @@ def dashboard():
 # Social routes
 #
 
-@bp.route('/friends', methods=['GET'])
+@bp.route('/friends')
 @login_required
 def friends():
-    return render_template('friends.html')
+     return render_template('friends.html')
+
 
 
 @bp.route('/add-friend', methods=['GET', 'POST'])
