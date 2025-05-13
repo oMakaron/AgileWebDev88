@@ -131,4 +131,3 @@ def get_chart_view(chart_id: int) -> Response:
     image_uri = f"data:image/png;base64,{image}"
 
     return jsonify({'chart_view': image_uri, 'unbound': unbound})
-
