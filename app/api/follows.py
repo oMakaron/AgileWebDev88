@@ -54,7 +54,9 @@ def unfollow(target_id) -> Response:
     try:
         db.session.delete(follow)
         db.session.commit()
-        return jsonify({'message': 'User unfollowed.'})
+        response = jsonify({'message': 'User unfollowed.'})
+        response.status_code = 204
+        return response
     
     except Exception:
         db.session.rollback()
