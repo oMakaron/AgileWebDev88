@@ -1,8 +1,9 @@
-# app/models/friend.py
 from app.extensions import db
+from .base import Base
 
-class Friend(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+class Friend(Base):
+    __tablename__ = 'friend'
+
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     friend_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     # prevent add one friend twice
