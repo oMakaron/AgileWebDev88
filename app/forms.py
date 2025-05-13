@@ -30,3 +30,6 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Sign In')
 
+class FollowForm(FlaskForm):
+    user_id = StringField('User ID', validators=[DataRequired()])
+    submit = SubmitField('Add Friend')

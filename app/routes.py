@@ -4,10 +4,11 @@ from io import BytesIO
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
+from requests import get, post, delete
 
 from app.extensions import db
-from app.models import User
-from app.forms import SignupForm, LoginForm, UploadForm
+from app.models import User, Follows
+from app.forms import SignupForm, LoginForm, UploadForm, FollowForm
 from app.services import Parser, registry, read_csv, save_to_string
 
 
@@ -145,13 +146,56 @@ def dashboard():
 @bp.route('/friends', methods=['GET'])
 @login_required
 def friends():
-    return render_template('friends.html')
+    full_url = request.host_url.rstrip('/') + url_for('follows.get_follows')
+    response = get(full_url)
+    friends = response.json()['friends']
+    return render_template('friends.html', friends=friends)
 
 
 @bp.route('/add-friend', methods=['GET', 'POST'])
 @login_required
 def add_friend():
+    form = FollowForm()
+    if form.validate_on_submit():
+        if request.method == 'POST':
+            target_user = User.query.filter_by(id=form.user_id.data).first()
+                
+            if not target_user:
+                flash("User ID not found.", "error")
+            elif target_user.id == session['user_id']:
+                flash("You cannot add yourself as a friend.", "error")
+            else:
+                existing = Follows.query.filter_by(follower=session['user_id'], following=target_user.id).first()
+                if existing:
+                    flash("This user is already your friend.", "info")
+                else:
+                    full_url = request.host_url.rstrip('/') + url_for('follows.follow', target_id=target_user.id)
+                    response = post(full_url)
+                    if response.status_code == 201:
+                        flash(f"User '{target_user.fullname}' followed successfully!", "success")
+                    else:
+                        flash(f"Error {response.status_code}", "error")
+
     return render_template('add_friend.html')
+
+@bp.route('/unfriend/<int:friend_id>', methods=['GET', 'DELETE'])
+@login_required
+def unfriend(friend_id):
+    if request.method == 'DELETE':
+        current_user_id = session['user_id']
+        relation = Follows.query.filter_by(follower=current_user_id, following=friend_id).first()
+
+        if relation:
+            full_url = request.host_url.rstrip('/') + url_for('follows.unfollow', target_id=relation.following)
+            response = delete(full_url)
+            if response.status_code == 204:
+                flash("User unfollowed successfully!", "success")
+            else:
+                flash(f"Error {response.status_code}", "error")
+        else:
+            flash("Friend not found.", "error")
+
+        return redirect(url_for('routes.friends'))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
