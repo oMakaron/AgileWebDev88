@@ -8,7 +8,8 @@ from matplotlib.pyplot import close
 
 from app.extensions import db
 from app.models import User
-from app.forms import SignupForm, LoginForm, UploadForm, ChartForm
+from app.models.friend import Friend
+from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
 from app.services import Parser, registry, read_csv, save_to_string
 
 
@@ -175,14 +176,43 @@ def dashboard():
 @bp.route('/friends')
 @login_required
 def friends():
-     return render_template('friends.html')
+    current_user_id = session['user_id']
+    friends = (
+        db.session.query(User)
+        .join(Friend, Friend.friend_id == User.id)
+        .filter(Friend.user_id == current_user_id)
+        .all()
+    )
+    return render_template('friends.html', friends=friends)
+
 
 
 
 @bp.route('/add-friend', methods=['GET', 'POST'])
 @login_required
 def add_friend():
-    return render_template('add_friend.html')
+    form = AddFriendForm()
+    current_user_id = session['user_id']
+
+    if form.validate_on_submit():
+        target_user = User.query.filter_by(id=form.user_id.data).first()
+
+        if not target_user:
+            flash("User ID not found.", "error")
+        elif target_user.id == current_user_id:
+            flash("You cannot add yourself as a friend.", "error")
+        else:
+            existing = Friend.query.filter_by(user_id=current_user_id, friend_id=target_user.id).first()
+            if existing:
+                flash("This user is already your friend.", "info")
+            else:
+                new_friend = Friend(user_id=current_user_id, friend_id=target_user.id)
+                db.session.add(new_friend)
+                db.session.commit()
+                flash(f"Friend '{target_user.fullname}' added successfully!", "success")
+                return redirect(url_for('routes.friends'))
+
+    return render_template('add_friend.html', form=form)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
