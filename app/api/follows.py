@@ -28,7 +28,7 @@ def get_follows() -> Response:
 @require_login
 def follow(target_id) -> Response:
     try:
-        if (Follows.query.filter_by(follower=get_user(), following=target_id).first):
+        if (Follows.query.filter_by(follower=get_user(), following=target_id).first()):
             response = jsonify({'error': 'Person already followed'})
             response.status_code = 409
             return response
