@@ -8,4 +8,3 @@ class Follows(Base):
 
     follower_user = db.relationship("User", foreign_keys=[follower], back_populates="following")
     following_user = db.relationship("User", foreign_keys=[following], back_populates="followers")
-    notifications = db.relationship("Notifications", back_populates="follow_notification")

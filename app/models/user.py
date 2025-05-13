@@ -20,6 +20,8 @@ class User(Base):
     followers = db.relationship('Follows', foreign_keys="follows.following")
     following = db.relationship('Follows', foreign_keys="follows.follower")
 
+    notifications = db.relationship("Notification", back_populates="user_notifications")
+
     def set_password(self, password):
         self.password = generate_password_hash(password)
 
