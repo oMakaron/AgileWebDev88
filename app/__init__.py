@@ -23,4 +23,3 @@ def create_app(configuration: Type[Config]) -> Flask:
 
 def cli_app():
     return create_app(DeploymentConfig)
-

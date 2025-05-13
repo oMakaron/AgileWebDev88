@@ -1,13 +1,14 @@
 from functools import wraps
-from io import BytesIO
+from io import BytesIO, StringIO
+import pandas as pd
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
 
 from app.extensions import db
 from app.models import User
-from app.forms import SignupForm, LoginForm, UploadForm
+from app.forms import SignupForm, LoginForm, UploadForm, ChartForm
 from app.services import Parser, registry, read_csv, save_to_string
 
 
@@ -102,18 +103,29 @@ def profile():
     return render_template('profile.html', user=user)
 
 
-@bp.route('/edit-profile', methods=['GET', 'PATCH'])
+from app.forms import EditProfileForm
+
+@bp.route('/edit-profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    if request.method == 'PATCH':
-        # Handle form submission (e.g., save updated profile data)
-        name = request.form.get('name')
-        email = request.form.get('email')
-        # Save the data (this is just a placeholder, implement actual services)
-        print(f"Updated Name: {name}, Updated Email: {email}")
-        return redirect('/profile')  # Redirect back to the profile page after saving
+    user = User.query.get(session['user_id'])
+    form = EditProfileForm()
 
-    return render_template("edit_profile.html")
+    if form.validate_on_submit():
+        user.fullname = form.name.data
+        user.email = form.email.data
+        if form.password.data:
+            user.set_password(form.password.data)
+
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('routes.profile'))
+
+    form.name.data = user.fullname
+    form.email.data = user.email
+
+    return render_template("edit_profile.html", form=form)
+
 
 
 @bp.route('/settings', methods=['GET', 'POST'])
@@ -154,75 +166,110 @@ def add_friend():
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Business routes
+# Visualization route
 #
 
-@bp.route('/upload', methods=['GET', 'POST'])
-@login_required
-def upload():
-    form = UploadForm()
-    chart = None
-
-    # returns True if the method is POST and the field conforms to all validators
-    if form.validate_on_submit():
-
-        # parses primitive frame data into useful constructs
-        data = read_csv(BytesIO(form.file.data.read()))
-        spec = Parser.parse_string(form.spec.data)
-
-        if 'type' not in spec:
-            raise Exception('Need a type')
-
-        plot_type = spec.pop('type')
-        plot_type = plot_type[0] if isinstance(plot_type, list) else plot_type
-
-        plotter = registry.functions[plot_type]
-
-        # TODO: Catch errors and report the message to the user
-        bound, unbound = plotter.bind_args(source=data, **spec)
-
-        if unbound:
-            # TODO: Flash these messages to the user so that they can understand why their
-            # option isn't doing anything. Maybe make `unbound` also offer near matches?
-            print(unbound)
-
-        # generates a base64 encoding of a png so that we don't have to save locally
-        figure = plotter.function(**bound)
-        image = save_to_string(figure)
-        close(figure)
-
-        # this boilerplate is necessary to get the browser to interpret the string as a png
-        chart = f"data:image/png;base64,{image}"
-
-    return render_template('upload.html', form=form, chart=chart)
-
-
 @bp.route('/visualise', methods=['GET', 'POST'])
-@login_required
 def visualise():
+    upload_form = UploadForm(prefix='up')
+    chart_form = ChartForm(prefix='ch')
     chart = None
+    show_config = False
+    data = None
 
-    # This just needs to be reworked
-    #
-    #    if request.method == 'GET':
-    #        # Handle visualization services here
-    #        x_col = request.args.get('xCol')
-    #        y_col = request.args.get('yCol')
-    #        chart_type = request.args.get('chartType')
-    #        title = request.args.get('title', 'Visualization')
-    #        color = request.args.get('color', 'blue')
-    #        grid = request.args.get('grid', '1') == '1'
-    #        figsize = tuple(map(int, request.args.get('figsize', '10,6').split(',')))
-    #
-    #        # Generate the chart using your existing plotting functions
-    #        if x_col and y_col and chart_type:
-    #            if chart_type == 'line':
-    #                chart = plots.plot_line(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
-    #            elif chart_type == 'bar':
-    #                chart = plots.plot_bar(x_col, y_col, title=title, color=color, grid=grid, figsize=figsize)
-    #            # Add other chart types here...
+    # --- 1. Handle File Upload ---
+    if upload_form.submit_upload.data and upload_form.validate_on_submit():
+        raw = BytesIO(upload_form.file.data.read())
+        df = read_csv(raw)
 
-    return render_template('visualise.html', chart=chart)
+        session['csv_string'] = raw.getvalue().decode('utf-8')
+        session['columns'] = df.columns.tolist()
+        session['uploaded_filename'] = upload_form.file.data.filename
+
+        # Reset previous state
+        chart_form.x_col.choices = []
+        chart_form.y_col.choices = []
+        chart_form.column.choices = []
+
+        return redirect(url_for('routes.visualise'))
+
+    # --- 2. Load DataFrame from Session if Available ---
+    if 'csv_string' in session:
+        try:
+            data = pd.read_csv(StringIO(session['csv_string']))
+            columns = session['columns']
+            # after `columns = session['columns']`
+            chart_form.x_col.choices = [('', '– Select X –')] + [(c, c) for c in columns]
+            chart_form.y_col.choices = [('', '– Select Y –')] + [(c, c) for c in columns]
+            chart_form.column.choices = [('', '– Select column –')] + [(c, c) for c in columns]
+
+            show_config = True
+        except Exception as e:
+            flash("Failed to load saved CSV data. Try re-uploading.", "error")
+            current_app.logger.error("CSV read error", exc_info=e)
+            session.clear()
+
+    # --- 3. Handle Chart Generation ---
+    if chart_form.submit_generate.data and chart_form.validate_on_submit() and data is not None:
+        try:
+            plot_type = chart_form.graph_type.data
+            plotter = registry.functions.get(plot_type)
+
+            args = {'source': data}
+
+            # Common
+            for attr in ['title', 'x_label', 'y_label', 'color', 'figsize']:
+                val = getattr(chart_form, attr).data
+                if val:
+                    args[attr] = val
+
+            if chart_form.grid.data:
+                args['grid'] = chart_form.grid.data
+
+
+            if chart_form.figsize.data:
+                try:
+                    w, h = map(int, chart_form.figsize.data.split('x'))
+                    args['figsize'] = (w, h)
+                except ValueError:
+                    flash("Invalid figure size. Use e.g. 10x6", 'warning')
+
+            # Type-specific
+            if plot_type in ['line', 'bar', 'scatter', 'area', 'box']:
+                args['x_col'] = chart_form.x_col.data
+                args['y_col'] = chart_form.y_col.data
+
+            elif plot_type == 'histogram':
+                args['column'] = chart_form.column.data
+                for attr in ['bins', 'density', 'cumulative', 'orientation', 'histtype', 'alpha']:
+                    val = getattr(chart_form, attr).data
+                    if val:
+                        args[attr] = val
+
+            elif plot_type == 'pie':
+                args['column'] = chart_form.column.data
+                for attr in ['angle', 'explode', 'autopct', 'shadow', 'radius', 'pctdistance', 'labeldistance', 'colors']:
+                    val = getattr(chart_form, attr).data
+                    if val:
+                        args[attr] = val
+
+            # Generate chart
+            bound, unbound = plotter.bind_args(**args)
+            fig = plotter.function(**bound)
+            chart = f"data:image/png;base64,{save_to_string(fig)}"
+            close(fig)
+
+        except Exception as e:
+            current_app.logger.error("Chart generation failed", exc_info=e)
+            flash(f"Chart error: {e}", "error")
+
+    return render_template("visualise.html",
+        upload_form=upload_form,
+        chart_form=chart_form,
+        show_config=show_config,
+        chart=chart,
+        uploaded_filename=session.get('uploaded_filename')
+    )
 
 
 @bp.route('/analytics')
