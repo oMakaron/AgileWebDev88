@@ -2,7 +2,6 @@ from functools import wraps
 from io import BytesIO, StringIO
 import pandas as pd
 import json
-import os
 
 from flask import (
     Blueprint, render_template, request, redirect, url_for, flash,

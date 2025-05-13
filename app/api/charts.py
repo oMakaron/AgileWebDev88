@@ -1,6 +1,6 @@
 import json, os, pandas as pd
 from flask import Blueprint, jsonify, request, session, abort
-from app.models import Chart, File, SharedChart
+from app.models import Chart, File
 from app.extensions import db
 from app.services import registry, save_to_string, read_csv
 from .utils import require_login, get_user, UPLOADS_FOLDER

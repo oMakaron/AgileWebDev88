@@ -24,7 +24,7 @@ def make_new_file() -> Response:
     name = request.form.get('name')
 
     if not (file and name):
-        abort(400, desctiption="Missing required fields.")
+        abort(400, description="Missing required fields.")
 
     try:
         new_file = File(name=name, owner_id=get_user()) # type: ignore
