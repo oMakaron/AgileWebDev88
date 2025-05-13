@@ -2,7 +2,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from ..extensions import db
 from .base import Base
-
+from .follow import Follows
 
 class User(Base):
     __tablename__ = 'users'
@@ -17,8 +17,17 @@ class User(Base):
     shared_files = db.relationship('SharedFile', back_populates='user')
     shared_charts = db.relationship('SharedChart', back_populates='user')
 
-    followers = db.relationship('Follows', foreign_keys="follows.following")
-    following = db.relationship('Follows', foreign_keys="follows.follower")
+    followers = db.relationship(
+        'Follows',
+        foreign_keys=[Follows.following],
+        back_populates='following_user'
+    )
+
+    following = db.relationship(
+        'Follows',
+        foreign_keys=[Follows.follower],
+        back_populates='follower_user'
+    )
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
