@@ -186,6 +186,20 @@ def friends():
     return render_template('friends.html', friends=friends)
 
 
+@bp.route('/unfriend/<int:friend_id>', methods=['POST'])
+@login_required
+def unfriend(friend_id):
+    current_user_id = session['user_id']
+    relation = Friend.query.filter_by(user_id=current_user_id, friend_id=friend_id).first()
+
+    if relation:
+        db.session.delete(relation)
+        db.session.commit()
+        flash("Friend removed successfully!", "success")
+    else:
+        flash("Friend not found.", "error")
+
+    return redirect(url_for('routes.friends'))
 
 
 @bp.route('/add-friend', methods=['GET', 'POST'])
