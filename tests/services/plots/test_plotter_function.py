@@ -95,3 +95,24 @@ class TestPlotterFunction(TestCase):
         with self.assertRaises(BindError) as context:
             captured.bind_args(a = 'frederick', b = 10)
         self.assertIn("b", context.exception.unbound()[0])
+
+
+    def test_list_args_required(self) -> None:
+        def test_function(a: int, b: str):
+            ...
+        captured = PlotterFunction(test_function, {})
+        self.assertEqual(
+            [{'name': 'a', 'required': 'true'}, {'name': 'b', 'required': 'true'}],
+            captured.list_args()
+        )
+
+
+    def test_list_args_optional(self) -> None:
+        def test_function(a: int = 10, b: str = 'fred'):
+            ...
+        captured = PlotterFunction(test_function, {})
+        self.assertEqual(
+            [{'name': 'a', 'required': 'false'}, {'name': 'b', 'required': 'false'}],
+            captured.list_args()
+        )
+

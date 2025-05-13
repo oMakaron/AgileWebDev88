@@ -24,3 +24,23 @@ class TestPlotRegistry(TestCase):
         self.registry.register_as('test2')(lambda x: x)
         self.registry.register_as('test3')(lambda x: x)
         self.assertEqual(3, len(self.registry.functions))
+
+
+    def test_list_plots(self) -> None:
+        self.registry.register_as('test 1')(lambda x: x + x)
+        self.registry.register_as('test 2')(lambda x, y: x * y)
+        self.assertEqual([{'name': 'test 1'}, {'name': 'test 2'}], self.registry.list_plots())
+
+
+    def test_list_common_args_init_largest(self) -> None:
+        self.registry.register_as('test 1')(lambda x, y, z, a, b, c: ...)
+        self.registry.register_as('test 2')(lambda x, y,    a, b   : ...)
+        self.registry.register_as('test 3')(lambda x,    z,       c: ...)
+        self.assertEqual([{'name': 'x', 'required': 'true'}], self.registry.list_common_args())
+
+
+    def test_list_common_args_init_smallest(self) -> None:
+        self.registry.register_as('test 1')(lambda x: x)
+        self.registry.register_as('test 2')(lambda x, y, z: x + y + z)
+        self.assertEqual([{'name': 'x', 'required': 'true'}], self.registry.list_common_args())
+
