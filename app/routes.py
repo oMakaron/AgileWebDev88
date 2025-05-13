@@ -56,7 +56,7 @@ def login():
         if not check_password_hash(user.password, form.password.data):
             flash('Incorrect password.', 'error')
             return render_template('login.html', form=form)
-        
+
         session['user_id'] = user.id
         flash('Login successful!', 'success')
         return redirect(url_for('routes.dashboard'))

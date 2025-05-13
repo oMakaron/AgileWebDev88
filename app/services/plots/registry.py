@@ -61,6 +61,12 @@ class PlotterFunction:
 
         return bound, unbound
 
+    def list_args(self) -> list[dict[str, str]]:
+        output = []
+        output.extend([{'name': name, 'required': 'true'} for name in self.required])
+        output.extend([{'name': name, 'required': 'false'} for name in self.optional])
+        return output
+
     def _cast(self, name: str, value: Any, errors: list) -> Any:
         try:
             cast_func = self.annotations[name]
@@ -72,19 +78,39 @@ class PlotterFunction:
 
 class PlotRegistry:
     functions: dict[str, PlotterFunction]
+    _common_options: list[dict[str, str]]
     _remaps: dict[Any, Callable]
 
     def __init__(self, remaps: dict[Any, Callable] | None = None) -> None:
         self.functions = dict()
+        self._common_options = []
         self._remaps = remaps or dict()
 
     def register_as(self, name: str) -> Callable:
         def register(function: Callable) -> Callable:
-            self.functions[name] = PlotterFunction(function, self._remaps)
+            plotter = PlotterFunction(function, self._remaps)
+
+            if not self._common_options:
+                self._common_options = [
+                    {'name': name, 'required': 'true' if name in plotter.required else 'false'}
+                    for name in plotter.combined
+                ]
+
+            self._common_options = [
+                arg for arg in self._common_options if arg['name'] in plotter.combined
+            ]
+
+            self.functions[name] = plotter
             return function
 
         if name in self.functions:
             raise RuntimeError(f"Cannot register function as there is already a function registered by {name!r}")
 
         return register
+
+    def list_plots(self) -> list[dict[str, str]]:
+        return [{'name': name} for name in self.functions.keys()]
+
+    def list_common_args(self) -> list[dict[str, str]]:
+        return self._common_options
 
