@@ -6,10 +6,10 @@ from app.services import registry, save_to_string, read_csv
 from .utils import require_login, get_user, UPLOADS_FOLDER
 from sqlalchemy.exc import SQLAlchemyError
 
-chart_api = Blueprint('chart_api', __name__, url_prefix='/charts')
+charts = Blueprint('charts', __name__, url_prefix='/charts')
 
 
-@chart_api.route('/', methods=['GET'])
+@charts.route('/', methods=['GET'])
 @require_login
 def list_charts():
     charts = Chart.query.filter_by(owner_id=get_user()).all()
@@ -25,7 +25,7 @@ def list_charts():
     ])
 
 
-@chart_api.route('/', methods=['POST'])
+@charts.route('/', methods=['POST'])
 @require_login
 def create_chart():
     data = request.get_json()
@@ -46,7 +46,7 @@ def create_chart():
     }), 201
 
 
-@chart_api.route('/<int:chart_id>', methods=['PATCH'])
+@charts.route('/<int:chart_id>', methods=['PATCH'])
 @require_login
 def update_chart(chart_id):
     chart = Chart.query.filter_by(id=chart_id, owner_id=get_user()).first_or_404()
@@ -66,7 +66,7 @@ def update_chart(chart_id):
     })
 
 
-@chart_api.route('/<int:chart_id>', methods=['DELETE'])
+@charts.route('/<int:chart_id>', methods=['DELETE'])
 @require_login
 def delete_chart(chart_id):
     chart = Chart.query.filter_by(id=chart_id, owner_id=get_user()).first_or_404()
