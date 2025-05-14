@@ -286,3 +286,19 @@ def generate_graph():
         chart             = chart,
         uploaded_filename = session.get('uploaded_filename')
     )
+
+# --------------------------------------------------------------------------------------------------------------------
+# Delete Graph Route
+
+@bp.route('/charts/<int:chart_id>/delete', methods=['POST'])
+@login_required
+def delete_chart(chart_id):
+    chart = Chart.query.filter_by(id=chart_id, owner_id=session['user_id']).first()
+    if not chart:
+        flash("Chart not found or not authorized.", "error")
+        return redirect(url_for('routes.dashboard'))
+
+    db.session.delete(chart)
+    db.session.commit()
+    flash("Chart deleted successfully.", "success")
+    return redirect(url_for('routes.dashboard'))
