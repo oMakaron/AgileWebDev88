@@ -160,6 +160,10 @@ def friends():
 def add_friend():
     return render_template('add_friend.html')
 
+@bp.route('/analytics')
+@login_required
+def analytics():
+    return render_template("analytics.html")
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Generate Graph Route
