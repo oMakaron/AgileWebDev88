@@ -5,6 +5,7 @@ import pandas as pd
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
+from requests import post, delete
 
 from app.extensions import db
 from app.models import User
@@ -179,35 +180,30 @@ def dashboard():
 @login_required
 def friends():
     current_user_id = session['user_id']
-    friends = (
-        db.session.query(User)
-        .join(Friend, Friend.friend_id == User.id)
-        .filter(Friend.user_id == current_user_id)
-        .all()
-    )
+    friends = User.query.filter_by(id=current_user_id).first().friends
     return render_template('friends.html', friends=friends)
 
 
-@bp.route('/unfriend/<int:friend_id>', methods=['POST'])
+@bp.route('/unfriend/<int:friend_id>', methods=['DELETE'])
 @login_required
 def unfriend(friend_id):
     current_user_id = session['user_id']
-    relation = Friend.query.filter_by(user_id=current_user_id, friend_id=friend_id).first()
-    reverse_relation = Friend.query.filter_by(user_id=friend_id, friend_id=current_user_id).first()
 
-    if relation:
-        db.session.delete(relation)
-    if reverse_relation:
-        db.session.delete(reverse_relation)
-    user = User.query.get(current_user_id)
-    notification = Notification(
-        user_id=friend_id,
-        message=f"{user.fullname} removed you from friends list."
-    )
-    db.session.add(notification)
+    full_url = request.host_url.rstrip('/') + url_for('friends.unfriend', target_id=friend_id)
+    response = delete(full_url)
+    if response.status_code == 204:
+        flash("User unfollowed successfully!", "success")
+        user = User.query.get(current_user_id)
+        notification = Notification(
+            user_id=friend_id,
+            message=f"{user.fullname} removed you from friends list."
+        )
+        db.session.add(notification)
+        db.session.commit()
+        flash("Friend removed successfully!", "success")
+    else:
+        flash(f"Error {response.status_code}", "error")
 
-    db.session.commit()
-    flash("Friend removed successfully!", "success")
     return redirect(url_for('routes.friends'))
 
 
@@ -227,21 +223,25 @@ def add_friend():
         else:
             existing = Friend.query.filter_by(user_id=current_user_id, friend_id=target_user.id).first()
             if existing:
-                flash("This user is already your friend.", "info")
+                if existing.is_friend():
+                    flash("This user is already your friend.", "info")
+                else:
+                    flash("You have requested to add this friend", "info")
             else:
-                db.session.add(Friend(user_id=current_user_id, friend_id=target_user.id))
-                db.session.add(Friend(user_id=target_user.id, friend_id=current_user_id))
-
-                from app.models.notification import Notification
-                notify = Notification(
-                    user_id=target_user.id,
-                    message=f"{User.query.get(current_user_id).fullname} added you as a friend!"
-                )
-                db.session.add(notify)
-
-                db.session.commit()
-                flash(f"Friend '{target_user.fullname}' added successfully!", "success")
-                return redirect(url_for('routes.friends'))
+                full_url = request.host_url.rstrip('/') + url_for('follows.follow', target_id=target_user.id)
+                response = post(full_url)
+                if response.status_code == 201:
+                    flash(f"User '{target_user.fullname}' followed successfully!", "success")
+                    from app.models.notification import Notification
+                    notify = Notification(
+                        user_id=target_user.id,
+                        message=f"{User.query.get(current_user_id).fullname} added you as a friend!"
+                    )
+                    db.session.add(notify)
+                    db.session.commit()
+                    return redirect(url_for('routes.friends'))
+                else:
+                    flash(f"Error {response.status_code}", "error")
 
     return render_template('add_friend.html', form=form)
 
