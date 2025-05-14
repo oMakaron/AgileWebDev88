@@ -14,15 +14,11 @@ def create_app(configuration: Type[Config]) -> Flask:
 
     with app.app_context():
         from app.models import User, File, Chart, SharedFile, SharedChart
-
         from app.routes import bp
+        from app.api import api as api_blueprint
+
         app.register_blueprint(bp)
-
-        from app.api import files, charts, plots
-        app.register_blueprint(files)
-        app.register_blueprint(charts)
-        app.register_blueprint(plots)
-
+        app.register_blueprint(api_blueprint)
 
     return app
 
