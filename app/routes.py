@@ -9,8 +9,10 @@ from matplotlib.pyplot import close
 from app.extensions import db
 from app.models import User
 from app.models.friend import Friend
+from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
 from app.services import Parser, registry, read_csv, save_to_string
+
 
 
 bp = Blueprint('routes', __name__)
@@ -191,14 +193,21 @@ def friends():
 def unfriend(friend_id):
     current_user_id = session['user_id']
     relation = Friend.query.filter_by(user_id=current_user_id, friend_id=friend_id).first()
+    reverse_relation = Friend.query.filter_by(user_id=friend_id, friend_id=current_user_id).first()
 
     if relation:
         db.session.delete(relation)
-        db.session.commit()
-        flash("Friend removed successfully!", "success")
-    else:
-        flash("Friend not found.", "error")
+    if reverse_relation:
+        db.session.delete(reverse_relation)
+    user = User.query.get(current_user_id)
+    notification = Notification(
+        user_id=friend_id,
+        message=f"{user.fullname} removed you from friends list."
+    )
+    db.session.add(notification)
 
+    db.session.commit()
+    flash("Friend removed successfully!", "success")
     return redirect(url_for('routes.friends'))
 
 
@@ -220,8 +229,16 @@ def add_friend():
             if existing:
                 flash("This user is already your friend.", "info")
             else:
-                new_friend = Friend(user_id=current_user_id, friend_id=target_user.id)
-                db.session.add(new_friend)
+                db.session.add(Friend(user_id=current_user_id, friend_id=target_user.id))
+                db.session.add(Friend(user_id=target_user.id, friend_id=current_user_id))
+
+                from app.models.notification import Notification
+                notify = Notification(
+                    user_id=target_user.id,
+                    message=f"{User.query.get(current_user_id).fullname} added you as a friend!"
+                )
+                db.session.add(notify)
+
                 db.session.commit()
                 flash(f"Friend '{target_user.fullname}' added successfully!", "success")
                 return redirect(url_for('routes.friends'))
@@ -340,3 +357,30 @@ def visualise():
 @login_required
 def analytics():
     return render_template('analytics.html')
+
+
+@bp.context_processor
+def inject_notifications():
+    if 'user_id' in session:
+        notifs = Notification.query.filter_by(
+            user_id=session['user_id']
+        ).order_by(Notification.timestamp.desc()).limit(10).all()
+        
+        unread_count = Notification.query.filter_by(
+            user_id=session['user_id'],
+            is_read=False
+        ).count()
+
+        return dict(notifications=notifs, unread_count=unread_count)
+    return dict(notifications=[], unread_count=0)
+
+@bp.route('/notifications/read', methods=['POST'])
+@login_required
+def mark_notifications_read():
+    from app.models.notification import Notification
+    Notification.query.filter_by(user_id=session['user_id'], is_read=False).update({'is_read': True})
+    db.session.commit()
+    return '', 204
+
+
+
