@@ -144,7 +144,8 @@ def edit_profile():
 @bp.route('/settings')
 @login_required
 def settings():
-    return render_template("settings.html")
+    user = db.session.get(User, session['user_id'])
+    return render_template('settings.html', user=user)
 
 
 @bp.route('/friends')
