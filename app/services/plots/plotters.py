@@ -8,9 +8,12 @@ from matplotlib.figure import Figure
 from pandas import DataFrame
 
 from app.services.plots.registry import PlotRegistry
+from typing import Optional
 
 registry = PlotRegistry(remaps={
     bool: lambda string: string.lower() == 'true',
+    str: str,
+    Optional[str]: str
 })
 
 @registry.register_as('line')
