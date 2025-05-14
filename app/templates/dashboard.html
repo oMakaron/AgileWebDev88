@@ -5,10 +5,10 @@
 <div class="min-h-screen bg-gray-100 p-6">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-gray-800">Your Dashboard</h1>
-    <button id="addChartBtn"
-            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+    <a href="{{ url_for('routes.generate_graph') }}"
+      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
       + Add Chart
-    </button>
+    </a>
   </div>
 
   <div id="chartGrid"
