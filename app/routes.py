@@ -228,7 +228,7 @@ def add_friend():
                 else:
                     flash("You have requested to add this friend", "info")
             else:
-                full_url = request.host_url.rstrip('/') + url_for('follows.follow', target_id=target_user.id)
+                full_url = request.host_url.rstrip('/') + url_for('friends.request_add', target_id=target_user.id)
                 response = post(full_url)
                 if response.status_code == 201:
                     flash(f"User '{target_user.fullname}' followed successfully!", "success")
