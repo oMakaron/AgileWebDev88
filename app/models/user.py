@@ -17,6 +17,10 @@ class User(Base):
     shared_files = db.relationship('SharedFile', back_populates='user')
     shared_charts = db.relationship('SharedChart', back_populates='user')
 
+    friends = db.relationship('Friend', 
+                              primary_join='and_(User.id == Friend.user_id), (Friend.is_friend == True)',
+                              lazy='dynamic')
+
     def set_password(self, password):
         self.password = generate_password_hash(password)
 
