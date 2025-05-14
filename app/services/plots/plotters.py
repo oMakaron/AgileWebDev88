@@ -11,7 +11,6 @@ from app.services.plots.registry import PlotRegistry
 
 registry = PlotRegistry(remaps={
     bool: lambda string: string.lower() == 'true',
-    tuple[int, int]: lambda string: tuple(int(val.removeprefix('_')) for val in string.split('x')),
 })
 
 @registry.register_as('line')
