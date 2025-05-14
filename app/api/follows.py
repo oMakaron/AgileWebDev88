@@ -24,7 +24,7 @@ def get_follows() -> Response:
     else:
         return jsonify(follow_dict)
 
-@follows.route('/<int:target_id>', methods=["POST"])
+@follows.route('/<int:target_id>/', methods=["POST"])
 @require_login
 def follow(target_id) -> Response:
     try:
@@ -46,7 +46,7 @@ def follow(target_id) -> Response:
         response.status_code = 500
         return response
     
-@follows.route('/<int:target_id>', methods=["DELETE"])
+@follows.route('/<int:target_id>/', methods=["DELETE"])
 @require_login
 def unfollow(target_id) -> Response:
     follow = Follows.query.filter_by(follower=get_user(), following=target_id).first_or_404()
