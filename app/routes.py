@@ -206,6 +206,31 @@ def generate_graph():
             session.clear()
 
     # --- 3. Chart Generation ---
+    # --- Handle Save Chart button ---
+    if request.method == "POST" and request.form.get("submit_save"):
+        # Retrieve from form instead of session
+        name       = request.form.get("name") or "Untitled"
+        spec       = request.form.get("spec") or "{}"
+        image_data = request.form.get("image_data")
+        file_id    = request.form.get("file_id")
+
+        if not image_data:
+            flash("No chart to save.", "error")
+            return redirect(url_for('routes.generate_graph'))
+
+        chart = Chart(
+            name       = name,
+            owner_id   = session['user_id'],
+            file_id    = file_id,
+            spec       = spec,
+            image_data = image_data
+        )
+        db.session.add(chart)
+        db.session.commit()
+
+        flash("Chart saved to dashboard!", "success")
+        return redirect(url_for('routes.dashboard'))
+
     if chart_form.submit_generate.data and chart_form.validate_on_submit() and data is not None:
         try:
             plot_type = chart_form.graph_type.data
@@ -247,28 +272,24 @@ def generate_graph():
 
             # Generate the figure
             bound, _ = plotter.bind_args(**args)
-            fig       = plotter.function(**bound)
+            fig = plotter.function(**bound)
 
-            # Capture raw base64 (no prefix) for preview + storage
             raw_b64 = save_to_string(fig)
-            chart   = f"data:image/png;base64,{raw_b64}"
             close(fig)
 
-            # Clean up for DB
             args.pop('source', None)
             args['graph_type'] = plot_type
 
-            # Save Chart with image_data
-            from app.models import Chart
-            new_chart = Chart(
-                name       = args.get('title') or 'Untitled',
-                owner_id   = session['user_id'],
-                file_id    = session.get('file_id'),
-                spec       = json.dumps(args),
-                image_data = raw_b64
-            )
-            db.session.add(new_chart)
-            db.session.commit()
+            # Store chart in session
+            session['pending_chart'] = {
+                'name': args.get('title') or 'Untitled',
+                'spec': json.dumps(args),
+                'image_data': raw_b64,
+                'file_id': session.get('file_id')
+            }
+
+            # Assign to `chart` so it renders in preview
+            chart = f"data:image/png;base64,{raw_b64}"
 
         except Exception as e:
             current_app.logger.error("Chart generation failed", exc_info=e)
@@ -282,6 +303,29 @@ def generate_graph():
         chart             = chart,
         uploaded_filename = session.get('uploaded_filename')
     )
+
+@bp.route('/save-chart', methods=['POST'])
+@login_required
+def save_chart():
+    pending = session.get('pending_chart')
+    if not pending:
+        flash("No chart to save.", "error")
+        return redirect(url_for('routes.generate_graph'))
+
+    chart = Chart(
+        name       = pending['name'],
+        owner_id   = session['user_id'],
+        file_id    = pending.get('file_id'),
+        spec       = pending['spec'],
+        image_data = pending['image_data']
+    )
+    db.session.add(chart)
+    db.session.commit()
+    session.pop('pending_chart', None)
+
+    flash("Chart saved to dashboard!", "success")
+    return redirect(url_for('routes.dashboard'))
+
 
 # --------------------------------------------------------------------------------------------------------------------
 # Delete Graph Route

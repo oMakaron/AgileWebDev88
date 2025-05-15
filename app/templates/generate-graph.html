@@ -9,7 +9,6 @@
     <aside class="bg-white shadow-md rounded-xl p-6 space-y-6 col-span-1 h-fit">
       <h2 class="text-xl font-semibold text-gray-800">Upload CSV & Configure</h2>
 
-      <!-- Flash Messages -->
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <ul>
@@ -42,7 +41,6 @@
           {{ chart_form.graph_type(class="w-full p-2 border border-gray-300 rounded-md") }}
         </div>
 
-        <!-- XY Fields -->
         <div data-chart="xy">
           <label class="text-sm text-gray-700">X Axis</label>
           {{ chart_form.x_col(class="w-full p-2 border border-gray-300 rounded-md") }}
@@ -52,22 +50,17 @@
           {{ chart_form.y_col(class="w-full p-2 border border-gray-300 rounded-md") }}
         </div>
 
-        <!-- Column Field -->
         <div data-chart="histogram pie">
           <label class="text-sm text-gray-700">Column</label>
           {{ chart_form.column(class="w-full p-2 border border-gray-300 rounded-md") }}
         </div>
 
-        <!-- Advanced Options Toggle -->
         <button type="button" @click="showAdvanced = !showAdvanced"
                 class="w-full text-sm font-semibold text-left text-blue-600 hover:underline mt-4">
           <span x-text="showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options'"></span>
         </button>
 
-        <!-- Advanced Options Section -->
         <div x-show="showAdvanced" x-transition class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-
-          <!-- Common optional fields -->
           {% for field in [chart_form.title, chart_form.x_label, chart_form.y_label, chart_form.color, chart_form.figsize, chart_form.grid] %}
             <div>
               <label class="text-sm text-gray-700">{{ field.label }}</label>
@@ -75,7 +68,6 @@
             </div>
           {% endfor %}
 
-          <!-- Histogram Fields -->
           <template x-if="document.querySelector('[name=ch-graph_type]').value === 'histogram'">
             <template>
               {% for field in [chart_form.bins, chart_form.density, chart_form.cumulative, chart_form.orientation, chart_form.histtype, chart_form.alpha] %}
@@ -87,7 +79,6 @@
             </template>
           </template>
 
-          <!-- Pie Fields -->
           <template x-if="document.querySelector('[name=ch-graph_type]').value === 'pie'">
             <template>
               {% for field in [chart_form.angle, chart_form.explode, chart_form.autopct, chart_form.shadow, chart_form.radius, chart_form.pctdistance, chart_form.labeldistance, chart_form.colors] %}
@@ -98,10 +89,8 @@
               {% endfor %}
             </template>
           </template>
-
         </div>
 
-        <!-- Submit Buttons -->
         <div class="mt-6">
           {{ chart_form.submit_generate(class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700") }}
         </div>
@@ -114,15 +103,18 @@
       {% if chart %}
         <div class="flex flex-col items-center gap-4 w-full">
           <img src="{{ chart }}" alt="Chart" class="max-w-4xl w-full border border-gray-300 rounded shadow" />
-          <form method="POST">
-            {{ chart_form.hidden_tag() }}
-            {{ chart_form.submit_save(class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700") }}
+
+          <form method="POST" action="{{ url_for('routes.generate_graph') }}">
+            <input type="hidden" name="submit_save" value="1">
+            <input type="hidden" name="image_data" value="{{ chart|replace('data:image/png;base64,','') }}">
+            <input type="hidden" name="spec" value="{{ session['pending_chart']['spec'] }}">
+            <input type="hidden" name="file_id" value="{{ session['pending_chart']['file_id'] }}">
+            <input type="hidden" name="name" value="{{ session['pending_chart']['name'] }}">
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
+              Save Chart
+            </button>
           </form>
         </div>
-      {% elif show_config %}
-        <p class="text-gray-500">Select chart options and generate a preview.</p>
-      {% else %}
-        <p class="text-gray-500">Upload a CSV file to begin chart creation.</p>
       {% endif %}
     </main>
   </div>
