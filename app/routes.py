@@ -71,7 +71,6 @@ def signup():
         if existing_user:
             flash('Email already registered.', 'error')
             return redirect(url_for('routes.signup'))
-
         new_user = User(
             fullname=form.name.data,
             email=form.email.data
@@ -90,6 +89,25 @@ def logout():
     session.pop('user_id', None)
     flash('Logout successful!', 'success')
     return redirect(url_for('routes.login'))
+
+@bp.route('/delete-account', methods=['POST'])
+@login_required
+def delete_account():
+    user_id = session['user_id']
+    charts = Chart.query.filter_by(owner_id=user_id).all()
+
+    if charts:
+        flash("Please delete all your charts before deleting your account.", "error")
+        return redirect(url_for('routes.settings'))
+
+    user = User.query.get(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    session.clear()
+
+    flash("Your account has been deleted.", "success")
+    return redirect(url_for('routes.index'))
+
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -234,7 +252,7 @@ def generate_graph():
                 args['y_col'] = chart_form.y_col.data
                 if not chart_form.x_col.data or not chart_form.y_col.data:
                     flash("Please select both X and Y axis for this chart.", "error")
-                    return render_template("visualise.html",
+                    return render_template("generate-graph.html",
                         upload_form=upload_form,
                         chart_form=chart_form,
                         show_config=show_config,
@@ -244,7 +262,7 @@ def generate_graph():
                 if plot_type == 'box':
                     if not pd.api.types.is_numeric_dtype(data[chart_form.y_col.data]):
                         flash("For box plots, the Y axis must be a numeric column.", "error")
-                        return render_template("visualise.html",
+                        return render_template("generate-graph.html",
                             upload_form=upload_form,
                             chart_form=chart_form,
                             show_config=show_config,
@@ -256,7 +274,7 @@ def generate_graph():
                 if not chart_form.column.data:
                     args['column'] = chart_form.column.data
                     flash("Please select a column for the histogram.", "error")
-                    return render_template("visualise.html",
+                    return render_template("generate-graph.html",
                         upload_form=upload_form,
                         chart_form=chart_form,
                         show_config=show_config,
@@ -271,7 +289,7 @@ def generate_graph():
                 args['column'] = chart_form.column.data
                 if not chart_form.column.data:
                     flash("Please select a column for the pie chart.", "error")
-                    return render_template("visualise.html",
+                    return render_template("generate-graph.html",
                         upload_form=upload_form,
                         chart_form=chart_form,
                         show_config=show_config,
@@ -307,6 +325,7 @@ def generate_graph():
             )
             db.session.add(new_chart)
             db.session.commit()
+
 
         except Exception as e:
             current_app.logger.error("Chart generation failed", exc_info=e)

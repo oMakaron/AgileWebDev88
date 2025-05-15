@@ -6,6 +6,18 @@
     <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6">
         <div class="bg-white rounded-2xl shadow-lg p-6">
         <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Settings</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="mb-4">
+            {% for category, message in messages %}
+                <li class="text-{{ 'red-600' if category == 'error' else 'green-600' }}">
+                {{ message }}
+                </li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+        {% endwith %}
+
 
         <div class="space-y-6">
             <div>
@@ -35,10 +47,13 @@
 
         <!-- Delete Account Section -->
         <div class="bg-white rounded-2xl shadow-lg p-6">
-            <button onclick="confirmDeletion()"
-                    class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-                Delete My Account
-            </button>
+            <form id="deleteForm" method="POST" action="{{ url_for('routes.delete_account') }}">
+                <button type="button"
+                        onclick="confirmDeletion()"
+                        class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+                    Delete My Account
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -47,7 +62,7 @@
 <script>
 function confirmDeletion() {
     if (confirm("Are you sure you want to delete your account?")) {
-        window.location.href = "{{ url_for('routes.delete_account') }}";
+        document.getElementById('deleteForm').submit();
     }
 }
 </script>
