@@ -1,11 +1,11 @@
 from flask import Blueprint, Response, jsonify, request, url_for
 from sqlalchemy import event, insert, delete
 
-from ..models import Notification, SharedChart, SharedFile, Follows, User, Chart, File, Friend
+from ..models import Notification, SharedChart, SharedFile, User, Chart, File, Friend
 from .utils import require_login, get_user
 from ..extensions import db
 
-notifications = Blueprint('notifications', __name__)
+notifications = Blueprint('notifications', __name__, url_prefix='/notifications')
 
 @event.listens_for(SharedChart, 'after_update')
 def chart_notif(mapper, connection, target):
