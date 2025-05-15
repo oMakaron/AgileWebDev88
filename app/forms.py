@@ -93,6 +93,8 @@ class ChartForm(FlaskForm):
     align = SelectField('Align', choices=[('center','Center'),('edge','Edge')], validators=[Optional()])
 
     submit_generate = SubmitField('Generate Chart')
+    submit_save = SubmitField('Save Chart')
+
 
 
 class SignupForm(FlaskForm):
