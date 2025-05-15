@@ -7,7 +7,7 @@ from ..extensions import db
 from .utils import require_login, get_user, UPLOADS_FOLDER
 
 
-files = Blueprint('files', __name__)
+files = Blueprint('files', __name__, url_prefix='/files')
 
 
 @files.route('/', methods=["GET"])
@@ -24,7 +24,7 @@ def make_new_file() -> Response:
     name = request.form.get('name')
 
     if not (file and name):
-        abort(400, desctiption="Missing required fields.")
+        abort(400, description="Missing required fields.")
 
     try:
         new_file = File(name=name, owner_id=get_user()) # type: ignore
@@ -122,3 +122,4 @@ def delete_file(file_id: int) -> Response:
         response = jsonify({'error': 'Internal server error.'})
         response.status_code = 500
         return response
+

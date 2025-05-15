@@ -21,3 +21,4 @@ def require_login(function: Callable) -> Callable:
 
 def get_user() -> int:
     return session['user_id']
+

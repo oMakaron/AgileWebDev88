@@ -1,5 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
+from wtforms.widgets import ColorInput
 from wtforms import (
     StringField, SelectField,
     SubmitField, PasswordField
@@ -47,7 +48,7 @@ class ChartForm(FlaskForm):
     title   = StringField('Title',           validators=[Optional()])
     x_label = StringField('X Axis Label',   validators=[Optional()])
     y_label = StringField('Y Axis Label',   validators=[Optional()])
-    color   = StringField('Color',           validators=[Optional()])
+    color   = StringField('Color', widget=ColorInput(), default="#0000ff", validators=[Optional()])
     figsize = StringField('Figure Size (e.g. 10x6)', validators=[Optional()])
     grid    = SelectField(
         'Show Grid',
@@ -92,6 +93,8 @@ class ChartForm(FlaskForm):
     align = SelectField('Align', choices=[('center','Center'),('edge','Edge')], validators=[Optional()])
 
     submit_generate = SubmitField('Generate Chart')
+    submit_save = SubmitField('Save Chart')
+
 
 
 class SignupForm(FlaskForm):
@@ -117,7 +120,3 @@ class EditProfileForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('New Password (optional)', validators=[Optional()])
     submit = SubmitField('Save Changes')
-
-class AddFriendForm(FlaskForm):
-    user_id = StringField('User ID', validators=[DataRequired()])
-    submit = SubmitField('Add Friend')
