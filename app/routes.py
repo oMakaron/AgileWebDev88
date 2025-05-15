@@ -10,7 +10,7 @@ from flask import (
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
 from app.extensions import db
-from app.models import User
+from app.models import User, Chart
 from app.models.friend import Friend
 from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
