@@ -14,7 +14,7 @@ from app.models import User, Chart
 from app.models.friend import Friend
 from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
-
+from app.models.shared_data import SharedData
 from app.services import Parser, registry, read_csv, save_to_string
 
 
@@ -239,6 +239,83 @@ def add_friend():
                 return redirect(url_for('routes.friends'))
 
     return render_template('add_friend.html', form=form)
+
+@bp.route('/share/<int:chart_id>', methods=['GET', 'POST'])
+@login_required
+def share_chart(chart_id):
+    user_id = session['user_id']
+    chart = Chart.query.filter_by(id=chart_id, owner_id=user_id).first()
+    if not chart:
+        flash("You can only share your own charts.")
+        return redirect(url_for('routes.dashboard'))
+
+    if request.method == 'POST':
+        shared_ids = request.form.getlist('shared_with')
+        for fid in shared_ids:
+            entry = SharedChart(
+                chart_id=chart.id,
+                shared_with_user_id=fid,
+                shared_by_user_id=user_id
+            )
+            db.session.add(entry)
+        db.session.commit()
+        flash("Chart shared successfully.")
+        return redirect(url_for('routes.dashboard'))
+
+    friends = get_friends(user_id)
+    return render_template('share.html', chart=chart, friends=friends)
+
+@bp.route('/share-data/<int:friend_id>', methods=['GET', 'POST'])
+@login_required
+def share_data_with_friend(friend_id):
+    user_id = session['user_id']
+    charts = Chart.query.filter_by(owner_id=user_id).all()
+
+    if request.method == 'POST':
+        chart_id = request.form.get('chart_id')
+
+        if not chart_id:
+            flash("Please select a chart to share.", "error")
+            return redirect(url_for('routes.share_data_with_friend', friend_id=friend_id))
+
+        new_share = SharedData(
+            chart_id=chart_id,
+            shared_with_user_id=friend_id,
+            shared_by_user_id=user_id
+        )
+        db.session.add(new_share)
+        # notifications
+        sharer = User.query.get(user_id)
+        chart = Chart.query.get(chart_id)
+        notification = Notification(
+            user_id=friend_id,
+            message=f"{sharer.fullname} shared a chart with you: {chart.name}"
+        )
+        db.session.add(notification)
+
+        db.session.commit()
+
+        flash("Chart shared successfully!", "success")
+        return redirect(url_for('routes.friends'))
+
+    return render_template("share_data.html", charts=charts, friend_id=friend_id)
+
+
+
+@bp.route('/message-received')
+@login_required
+def shared_with_me():
+    user_id = session['user_id']
+
+    shared_charts = (
+        db.session.query(Chart)
+        .join(SharedData, SharedData.chart_id == Chart.id)
+        .filter(SharedData.shared_with_user_id == user_id)
+        .all()
+    )
+
+    return render_template("shared_with_me.html", charts=shared_charts)
+
 
 
 # ---------------------------------------------------------------------------------------------------------------------
