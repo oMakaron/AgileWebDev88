@@ -259,9 +259,37 @@ def visualise():
             if plot_type in ['line', 'bar', 'scatter', 'area', 'box']:
                 args['x_col'] = chart_form.x_col.data
                 args['y_col'] = chart_form.y_col.data
-
+                if not chart_form.x_col.data or not chart_form.y_col.data:
+                    flash("Please select both X and Y axis for this chart.", "error")
+                    return render_template("visualise.html",
+                        upload_form=upload_form,
+                        chart_form=chart_form,
+                        show_config=show_config,
+                        chart=None,
+                        uploaded_filename=session.get('uploaded_filename')
+                    )
+                if plot_type == 'box':
+                    if not pd.api.types.is_numeric_dtype(data[chart_form.y_col.data]):
+                        flash("For box plots, the Y axis must be a numeric column.", "error")
+                        return render_template("visualise.html",
+                            upload_form=upload_form,
+                            chart_form=chart_form,
+                            show_config=show_config,
+                            chart=None,
+                            uploaded_filename=session.get('uploaded_filename')
+                        )
+                
             elif plot_type == 'histogram':
-                args['column'] = chart_form.column.data
+                if not chart_form.column.data:
+                    args['column'] = chart_form.column.data
+                    flash("Please select a column for the histogram.", "error")
+                    return render_template("visualise.html",
+                        upload_form=upload_form,
+                        chart_form=chart_form,
+                        show_config=show_config,
+                        chart=None,
+                        uploaded_filename=session.get('uploaded_filename')
+                    )
                 for attr in ['bins', 'density', 'cumulative', 'orientation', 'histtype', 'alpha']:
                     val = getattr(chart_form, attr).data
                     if val:
@@ -269,6 +297,15 @@ def visualise():
 
             elif plot_type == 'pie':
                 args['column'] = chart_form.column.data
+                if not chart_form.column.data:
+                    flash("Please select a column for the pie chart.", "error")
+                    return render_template("visualise.html",
+                        upload_form=upload_form,
+                        chart_form=chart_form,
+                        show_config=show_config,
+                        chart=None,
+                        uploaded_filename=session.get('uploaded_filename')
+                    )
                 for attr in ['angle', 'explode', 'autopct', 'shadow', 'radius', 'pctdistance', 'labeldistance', 'colors']:
                     val = getattr(chart_form, attr).data
                     if val:
