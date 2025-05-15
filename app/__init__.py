@@ -20,11 +20,12 @@ def create_app(configuration: Type[Config]) -> Flask:
         from app.routes import bp
         app.register_blueprint(bp)
 
-        from app.api import files, charts, plots, friends
+        from app.api import files, charts, plots, friends, notifications
         app.register_blueprint(files, url_prefix='/files')
         app.register_blueprint(charts, url_prefix='/charts')
         app.register_blueprint(plots, url_prefix='/plots')
         app.register_blueprint(friends, url_prefix='/friends')
+        app.register_blueprint(notifications, url_prefix='/notifications')
 
     return app
 
