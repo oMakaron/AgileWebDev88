@@ -262,14 +262,11 @@ def generate_graph():
             args.pop('source', None)
             args['graph_type'] = plot_type
 
-            # Save Chart with image_data
-            from app.models import Chart
             new_chart = Chart(
                 name       = args.get('title') or 'Untitled',
                 owner_id   = session['user_id'],
                 file_id    = session.get('file_id'),
-                spec       = json.dumps(args),
-                image_data = raw_b64
+                spec       = json.dumps(args)
             )
             db.session.add(new_chart)
             db.session.commit()

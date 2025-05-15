@@ -28,9 +28,9 @@
           </button>
         </form>
       </div>
-      <img src="data:image/png;base64,{{ chart.image_data }}"
-           alt="Chart {{ chart.name }}"
-           class="w-full rounded border" />
+      <img src="{{ chart.image_url }}"
+        alt="Chart {{ chart.name }}"
+        class="w-full rounded border" />
     </div>
     {% endfor %}
   </div>

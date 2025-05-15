@@ -7,6 +7,7 @@ default_db_location = 'sqlite:///' + path.join(basedir, 'app.db')
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = getenv('FLASK_SECRET_KEY')
+    IMAGE_FOLDER = path.join(basedir, 'app', 'static', 'chart_images')
 
 
 class DeploymentConfig(Config):
