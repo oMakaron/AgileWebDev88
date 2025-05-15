@@ -89,7 +89,7 @@ def get_notifs():
     notif = Notification.query.filter_by(receiver=get_user()).all()
     return jsonify([{'id': notifs.id, 
                      'message': notifs.message, 
-                     'href': notifs.href, 
+                     'href': url_for('routes.mark_notifications_read', notif_id=notifs.id), 
                      'date': notifs.created_at, 
                      'is_read': notifs.is_read} for notifs in notif])
 

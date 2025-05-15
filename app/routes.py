@@ -5,7 +5,7 @@ import pandas as pd
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
-from requests import post, delete
+from requests import post, delete, patch
 
 from app.extensions import db
 from app.models import User
@@ -357,13 +357,21 @@ def inject_notifications():
         return dict(notifications=notifs, unread_count=unread_count)
     return dict(notifications=[], unread_count=0)
 
-@bp.route('/notifications/read', methods=['POST'])
+@bp.route('/notifications/read/<int:notif_id>', methods=['PATCH'])
 @login_required
-def mark_notifications_read():
-    from app.models.notification import Notification
-    Notification.query.filter_by(user_id=session['user_id'], is_read=False).update({'is_read': True})
-    db.session.commit()
-    return '', 204
+def mark_notifications_read(notif_id):
+    try:
+        notif = Notification.query.filter_by(id=notif_id).first_or_404()
+        full_url = request.host_url.rstrip('/') + url_for('notifications.mark_read', notif_id=notif_id)
+        response = patch(full_url)
+        return redirect(notif.href)        
+    except Exception:
+        flash('error handling notification', 'error')
+        return redirect(url_for('routes.dashboard'))
 
-
-
+#for later after will's html
+'''
+full_url = request.host_url.rstrip('/') + url_for('notifications.get_notifs')
+response = get(full_url)
+return render_template('.html', ls=repsponse.json())
+'''
