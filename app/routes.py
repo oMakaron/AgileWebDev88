@@ -200,7 +200,6 @@ def unfriend(friend_id):
         )
         db.session.add(notification)
         db.session.commit()
-        flash("Friend removed successfully!", "success")
     else:
         flash(f"Error {response.status_code}", "error")
 
