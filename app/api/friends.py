@@ -4,7 +4,7 @@ from .utils import require_login, get_user
 from ..extensions import db
 from ..models import User, Friend
 
-friends = Blueprint('friends', __name__)
+friends = Blueprint('friends', __name__, url_prefix='friends')
 
 @friends.route('/')
 @require_login
