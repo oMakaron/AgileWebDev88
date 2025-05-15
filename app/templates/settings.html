@@ -45,10 +45,13 @@
 
         <!-- Delete Account Section -->
         <div class="bg-white rounded-2xl shadow-lg p-6">
-            <button onclick="confirmDeletion()"
-                    class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-                Delete My Account
+        <form method="POST" action="{{ url_for('routes.delete_account') }}"
+                onsubmit="return confirm('Are you sure you want to delete your account?');">
+            <button type="submit"
+                    class="w-full bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition">
+            Delete My Account
             </button>
+        </form>
         </div>
     </div>
 </div>

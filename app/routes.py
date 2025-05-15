@@ -15,6 +15,7 @@ from app.models.friend import Friend
 from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
 from app.models.shared_data import SharedData
+from app.models.associations import SharedChart
 from app.services import Parser, registry, read_csv, save_to_string
 
 
@@ -155,19 +156,23 @@ def settings():
 @login_required
 def delete_account():
     user_id = session['user_id']
-    charts = Chart.query.filter_by(owner_id=user_id).all()
 
-    if charts:
-        flash("Please delete all your charts before deleting your account.", "error")
-        return redirect(url_for('routes.settings'))
+    with db.session.no_autoflush:
+        charts = Chart.query.filter_by(owner_id=user_id).all()
+        for chart in charts:
+            db.session.delete(chart)
 
-    user = User.query.get(user_id)
-    db.session.delete(user)
+        SharedData.query.filter_by(shared_by_user_id=user_id).delete(synchronize_session=False)
+        SharedData.query.filter_by(shared_with_user_id=user_id).delete(synchronize_session=False)
+
+        user = User.query.get(user_id)
+        db.session.delete(user)
+
     db.session.commit()
     session.clear()
+    flash("Your account and related data have been deleted.", "success")
+    return redirect(url_for('routes.login'))
 
-    flash("Your account has been deleted.", "success")
-    return redirect(url_for('routes.index'))
 
 
 @bp.route('/friends')
