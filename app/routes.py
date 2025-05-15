@@ -10,7 +10,7 @@ from flask import (
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
 from app.extensions import db
-from app.models import User
+from app.models import User, Chart
 from app.models.friend import Friend
 from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
@@ -95,6 +95,7 @@ def logout():
     return redirect(url_for('routes.login'))
 
 
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Main Pages
 
@@ -149,6 +150,24 @@ def edit_profile():
 def settings():
     user = db.session.get(User, session['user_id'])
     return render_template('settings.html', user=user)
+
+@bp.route('/delete-account', methods=['POST'])
+@login_required
+def delete_account():
+    user_id = session['user_id']
+    charts = Chart.query.filter_by(owner_id=user_id).all()
+
+    if charts:
+        flash("Please delete all your charts before deleting your account.", "error")
+        return redirect(url_for('routes.settings'))
+
+    user = User.query.get(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    session.clear()
+
+    flash("Your account has been deleted.", "success")
+    return redirect(url_for('routes.index'))
 
 
 @bp.route('/friends')
