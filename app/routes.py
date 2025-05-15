@@ -270,6 +270,7 @@ def share_chart(chart_id):
 def share_data_with_friend(friend_id):
     user_id = session['user_id']
     charts = Chart.query.filter_by(owner_id=user_id).all()
+    chart_id = None 
 
     if request.method == 'POST':
         chart_id = request.form.get('chart_id')
@@ -278,15 +279,24 @@ def share_data_with_friend(friend_id):
             flash("Please select a chart to share.", "error")
             return redirect(url_for('routes.share_data_with_friend', friend_id=friend_id))
 
+        already_shared = SharedData.query.filter_by(
+            chart_id=chart_id,
+            shared_with_user_id=friend_id,
+            shared_by_user_id=user_id
+        ).first()
+
+        if already_shared and request.form.get('confirm') != 'yes':
+            return render_template("share_data.html", charts=charts, friend_id=friend_id, confirm_chart_id=chart_id)
+
         new_share = SharedData(
             chart_id=chart_id,
             shared_with_user_id=friend_id,
             shared_by_user_id=user_id
         )
         db.session.add(new_share)
-        # notifications
-        sharer = User.query.get(user_id)
+
         chart = Chart.query.get(chart_id)
+        sharer = User.query.get(user_id)
         notification = Notification(
             user_id=friend_id,
             message=f"{sharer.fullname} shared a chart with you: {chart.name}"
@@ -294,7 +304,6 @@ def share_data_with_friend(friend_id):
         db.session.add(notification)
 
         db.session.commit()
-
         flash("Chart shared successfully!", "success")
         return redirect(url_for('routes.friends'))
 
