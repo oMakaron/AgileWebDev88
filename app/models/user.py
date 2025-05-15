@@ -1,5 +1,6 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import and_
+from sqlalchemy.orm import foreign
 
 from ..extensions import db
 from .base import Base
@@ -20,7 +21,7 @@ class User(Base):
     shared_charts = db.relationship('SharedChart', back_populates='user')
 
     friends = db.relationship('Friend', 
-                              primary_join=and_(id == Friend.user_id, Friend.is_friend == True),
+                              primary_join=and_(id == foreign(Friend.user_id), foreign(Friend.is_friend) == True),
                               lazy='dynamic')
 
     def set_password(self, password):
