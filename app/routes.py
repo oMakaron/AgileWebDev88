@@ -16,7 +16,6 @@ from app.models import User, Chart
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm
 from app.models import User
 from app.models.friend import Friend
-from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
 from app.models.chart import Chart
 
@@ -174,12 +173,6 @@ def unfriend(friend_id):
     if response.status_code == 204:
         flash("User unfollowed successfully!", "success")
         user = User.query.get(current_user_id)
-        notification = Notification(
-            user_id=friend_id,
-            message=f"{user.fullname} removed you from friends list."
-        )
-        db.session.add(notification)
-        db.session.commit()
     else:
         flash(f"Error {response.status_code}", "error")
 
@@ -211,13 +204,6 @@ def add_friend():
                 response = post(full_url)
                 if response.status_code == 201:
                     flash(f"User '{target_user.fullname}' followed successfully!", "success")
-                    from app.models.notification import Notification
-                    notify = Notification(
-                        user_id=target_user.id,
-                        message=f"{User.query.get(current_user_id).fullname} added you as a friend!"
-                    )
-                    db.session.add(notify)
-                    db.session.commit()
                     return redirect(url_for('routes.friends'))
                 else:
                     flash(f"Error {response.status_code}", "error")
