@@ -6,8 +6,6 @@
   <title>{% block title %}DataVizApp{% endblock %}</title>
   <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-  {{ moment.include_moment() }}
 </head>
 <body class="h-screen overflow-hidden">
 
@@ -22,7 +20,7 @@
     <h1 class="text-2xl font-bold mb-8">DataVizApp</h1>
     <nav class="space-y-4 text-lg">
       <a href="/dashboard" class="block hover:text-blue-400">Home</a>
-      <a href="/visualise" class="block hover:text-blue-400">Visualise</a>
+      <a href="/generate-graph" class="block hover:text-blue-400">Generate Graph</a>
       <a href="/friends"   class="block hover:text-blue-400">Share</a>
       <a href="/profile"   class="block hover:text-blue-400">Profile</a>
     </nav>
@@ -58,34 +56,23 @@
       <!-- Action Buttons -->
       <div class="ml-auto flex items-center space-x-4 relative">
         <!-- Notifications Button -->
-        <div class="relative z-40">
-          <button id="notificationsBtn" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 flex items-center space-x-2">
-            <span class="flex items-center">
-              Notifications
-              {% if unread_count > 0 %}
-                <span class="ml-1 w-2.5 h-2.5 bg-red-600 rounded-full inline-block"></span>
-              {% endif %}
-            </span>
-
-            <svg id="notificationsArrow" class="w-4 h-4 ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="relative">
+          <button id="notificationsBtn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 flex items-center space-x-2">
+            <span>Notifications</span>
+            <svg id="notificationsArrow" class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path id="arrowPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          
           <!-- Dropdown -->
           <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-300 rounded shadow-lg">
-            <ul class="divide-y divide-gray-200 max-h-64 overflow-y-auto">
-              {% if notifications %}
-                {% for n in notifications %}
-                  <li class="p-4 text-sm text-gray-800 hover:bg-gray-100 {% if not n.is_read %} bg-blue-50 {% endif %}">
-                    {{ n.message }}
-                    <div class="text-xs text-gray-500 mt-1">{{ moment(n.timestamp).fromNow() }}</div>
-                  </li>
-                {% endfor %}
-              {% else %}
-                <li class="p-4 text-sm text-gray-500">No notifications.</li>
-              {% endif %}
+            <ul class="divide-y divide-gray-200">
+              <li class="p-4 text-sm">New comment on your post</li>
+              <li class="p-4 text-sm">Your report is ready</li>
+              <li class="p-4 text-sm">System update available</li>
             </ul>
+            <button class="w-full text-center py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium">
+              Read All
+            </button>
           </div>
         </div>
 
@@ -131,19 +118,15 @@
     // Toggle dropdown visibility and arrow direction
     notificationsBtn.addEventListener('click', () => {
       notificationsDropdown.classList.toggle('hidden');
-      const isOpen = !notificationsDropdown.classList.contains('hidden');
-      arrowPath.setAttribute('d', isOpen ? 'M19 15l-7-7-7 7' : 'M19 9l-7 7-7-7');
-
-      if (isOpen) {
-      fetch("/notifications/read", { method: "POST" });
-
-      const redDot = document.querySelector('#notificationsBtn .bg-red-600.rounded-full');
-      if (redDot) {
-        redDot.remove();
-       }
+      if (notificationsDropdown.classList.contains('hidden')) {
+        // Arrow points down
+        arrowPath.setAttribute('d', 'M19 9l-7 7-7-7');
+      } else {
+        // Arrow points up
+        arrowPath.setAttribute('d', 'M19 15l-7-7-7 7');
       }
     });
-      
+
     // Close dropdown when clicking outside
     document.addEventListener('click', (event) => {
       if (!notificationsBtn.contains(event.target) && !notificationsDropdown.contains(event.target)) {
@@ -153,9 +136,5 @@
       }
     });
   </script>
-<div class="hidden">
-  text-white text-red-600 text-red-500 bg-red-600 bg-red-500 text-[10px] font-bold rounded-full
-</div>
 </body>
 </html>
-

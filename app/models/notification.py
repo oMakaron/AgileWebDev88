@@ -1,4 +1,3 @@
-# app/models/notification.py
 from ..extensions import db
 from .base import Base
 
