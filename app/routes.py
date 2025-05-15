@@ -361,13 +361,14 @@ def inject_notifications():
 @login_required
 def mark_notifications_read(notif_id):
     try:
-        notif = Notification.query.filter_by(id=notif_id).first_or_404()
-        full_url = request.host_url.rstrip('/') + url_for('notifications.mark_read', notif_id=notif_id)
-        response = patch(full_url)
-        return redirect(notif.href)        
+        notif = Notification.query.get(notif_id)
+        if(notif.user_id == session['user_id']):
+            full_url = request.host_url.rstrip('/') + url_for('notifications.mark_read', notif_id=notif_id)
+            response = patch(full_url)
+            return redirect(notif.href)        
     except Exception:
         flash('error handling notification', 'error')
-        return redirect(url_for('routes.dashboard'))
+    return redirect(url_for('routes.dashboard'))
 
 #for later after will's html
 '''
