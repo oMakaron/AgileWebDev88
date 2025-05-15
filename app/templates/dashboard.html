@@ -6,31 +6,31 @@
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-gray-800">Your Dashboard</h1>
     <a href="{{ url_for('routes.generate_graph') }}"
-      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+       id="addChartBtn"
+       class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
       + Add Chart
     </a>
   </div>
 
-  <div id="chartGrid"
-       class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-       style="min-height: 500px;">
+  <!-- relative container for absolute cards -->
+  <div id="chartGrid" class="relative min-h-[80vh]">
     {% for chart in charts %}
-    <div class="chart-card bg-white rounded-lg shadow-md p-4 resize overflow-auto"
-         data-chart-id="{{ chart.id }}">
+    <div class="chart-card absolute flex-none w-80 bg-white rounded-lg shadow-md p-4"
+         data-chart-id="{{ chart.id }}"
+         style="top: {{ loop.index0 * 5 }}rem; left: {{ loop.index0 * 22 }}rem">
       <div class="flex justify-between items-center mb-2">
         <h2 class="font-semibold text-lg text-gray-700 truncate">{{ chart.name }}</h2>
         <form action="{{ url_for('routes.delete_chart', chart_id=chart.id) }}"
               method="post"
-              onsubmit="return confirm('Are you sure you want to delete this chart?');">
-          <button type="submit"
-                  class="text-sm text-red-500 hover:underline">
+              onsubmit="return confirm('Delete this chart?');">
+          <button type="submit" class="text-sm text-red-500 hover:underline">
             Remove
           </button>
         </form>
       </div>
       <img src="data:image/png;base64,{{ chart.image_data }}"
            alt="Chart {{ chart.name }}"
-           class="w-full rounded border" />
+           class="w-full h-auto object-contain" />
     </div>
     {% endfor %}
   </div>
@@ -38,24 +38,58 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
 <script>
-  // 1) Make the grid sortable
-  Sortable.create(document.getElementById('chartGrid'), {
-    animation: 150,
-    ghostClass: 'bg-yellow-50'
-  });
+document.addEventListener('DOMContentLoaded', () => {
+  interact('.chart-card')
+    // free-form drag
+    .draggable({
+      inertia: true,
+      listeners: { move: dragMoveListener }
+    })
+    // bottom-right resize
+    .resizable({
+      edges: { left: false, right: true, bottom: true, top: false },
+      inertia: true,
+      modifiers: [
+        interact.modifiers.restrictSize({
+          min: { width: 200, height: 100 },
+          max: { width: 800, height: 600 }
+        })
+      ],
+      listeners: {
+        move (event) {
+          const target = event.target;
+          let x = parseFloat(target.getAttribute('data-x')) || 0;
+          let y = parseFloat(target.getAttribute('data-y')) || 0;
 
-  // 2) “Remove” only hides the card (does NOT delete from DB)
-  document.querySelectorAll('.remove-btn').forEach(btn =>
-    btn.addEventListener('click', e =>
-      e.target.closest('.chart-card').style.display = 'none'
-    )
-  );
+          // update size
+          target.style.width  = event.rect.width  + 'px';
+          target.style.height = event.rect.height + 'px';
 
-  // 3) Add Chart stub
-  document.getElementById('addChartBtn').addEventListener('click', () => {
-    alert('To-do: show chart picker modal');    // TODO: Replace this with actual chart picker modal
-  });
+          // adjust position if resizing from top/left (not used here)
+          x += event.deltaRect.left;
+          y += event.deltaRect.top;
+
+          // apply translation
+          target.style.transform = `translate(${x}px, ${y}px)`;
+          target.setAttribute('data-x', x);
+          target.setAttribute('data-y', y);
+        }
+      }
+    });
+});
+
+// shared drag listener
+function dragMoveListener (event) {
+  const target = event.target;
+  const dx = event.dx, dy = event.dy;
+  const x = (parseFloat(target.getAttribute('data-x')) || 0) + dx;
+  const y = (parseFloat(target.getAttribute('data-y')) || 0) + dy;
+
+  target.style.transform = `translate(${x}px, ${y}px)`;
+  target.setAttribute('data-x', x);
+  target.setAttribute('data-y', y);
+}
 </script>
 {% endblock %}
