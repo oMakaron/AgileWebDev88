@@ -325,6 +325,7 @@ def generate_graph():
             )
             db.session.add(new_chart)
             db.session.commit()
+            flash('Chart saved successfully!', 'success')
 
 
         except Exception as e:

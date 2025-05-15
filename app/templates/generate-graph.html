@@ -8,16 +8,19 @@
     <aside class="bg-white shadow-md rounded-xl p-6 space-y-6 col-span-1 h-fit">
       <h2 class="text-xl font-semibold text-gray-800">Upload CSV & Configure</h2>
 
-      <!-- Flash Messages -->
+      <!-- Flash Messages -->=
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <ul>
             {% for category, msg in messages %}
-              <li class="text-sm {{ 'text-red-600' if category == 'error' else 'text-green-600' }}">{{ msg }}</li>
+              {% if category != 'success' %}
+                <li class="text-sm text-red-600">{{ msg }}</li>
+              {% endif %}
             {% endfor %}
           </ul>
         {% endif %}
       {% endwith %}
+
 
       <!-- Upload Form -->
       <form method="POST" enctype="multipart/form-data" class="space-y-4">
@@ -61,14 +64,12 @@
         {% for field in [chart_form.title, chart_form.x_label, chart_form.y_label, chart_form.color, chart_form.figsize, chart_form.grid] %}
           <div>
             <label class="text-sm text-gray-700">{{ field.label }}</label>
-            <span class="text-gray-400 text-sm">(optional)</span>
             {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
           </div>
         {% endfor %}
 
-        <div class="flex justify-between gap-4">
-          {{ chart_form.submit_generate(class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700") }}
-          <button type="button" class="w-full bg-gray-800 text-white py-2 rounded-md hover:bg-gray-700">Save Chart</button>
+        <div>
+          {{ chart_form.submit_generate(class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700", value="Generate and Save") }}
         </div>
       </form>
       {% endif %}
@@ -79,10 +80,6 @@
       {% if chart %}
         <div class="flex flex-col items-center gap-4 w-full">
           <img src="{{ chart }}" alt="Chart" class="max-w-4xl w-full border border-gray-300 rounded shadow" />
-          <form method="POST">
-            {{ chart_form.hidden_tag() }}
-            {{ chart_form.submit_save(class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700") }}
-          </form>
         </div>
       {% elif show_config %}
         <p class="text-gray-500">Select chart options and generate a preview.</p>
