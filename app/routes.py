@@ -175,7 +175,14 @@ def delete_account():
 @bp.route('/friends')
 @login_required
 def friends():
-     return render_template('friends.html')
+    current_user_id = session['user_id']
+    friends = (
+        db.session.query(User)
+        .join(Friend, Friend.friend_id == User.id)
+        .filter(Friend.user_id == current_user_id)
+        .all()
+    )
+    return render_template('friends.html', friends=friends)
 
 @bp.route('/unfriend/<int:friend_id>', methods=['DELETE'])
 @login_required
