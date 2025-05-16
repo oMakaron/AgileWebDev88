@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}DataVizApp{% endblock %}</title>
   <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
-  <!-- Alpine.js for the toast -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
@@ -13,11 +12,9 @@
 
   {% block content %}{% endblock %}
 
-  {# —————————————— #}
-  {# TOAST CONTAINER #}
+  <!-- Floating Toast Messages -->
   {% with messages = get_flashed_messages(with_categories=True) %}
-  {% for category, message in messages %}
-  {% if category == 'success' %}
+    {% for category, message in messages %}
       <div
         x-data="{ show: true }"
         x-init="setTimeout(() => show = false, 10000)"
@@ -29,11 +26,25 @@
         x-transition:leave-start="opacity-100 translate-y-0"
         x-transition:leave-end="opacity-0 -translate-y-5"
         class="fixed top-6 left-1/2 transform -translate-x-1/2 
-               bg-white border-l-4 border-green-500 shadow-lg rounded 
-               px-6 py-4 z-50 w-[300px]"
+               bg-white border-l-4 shadow-lg rounded 
+               px-6 py-4 z-50 w-[300px]
+               {% if category == 'success' %}
+                 border-green-500
+               {% elif category == 'error' %}
+                 border-red-500
+               {% else %}
+                 border-gray-500
+               {% endif %}"
       >
         <div class="flex justify-between items-center">
-          <div class="text-green-700 text-sm font-medium">
+          <div class="text-sm font-medium
+                      {% if category == 'success' %}
+                        text-green-700
+                      {% elif category == 'error' %}
+                        text-red-700
+                      {% else %}
+                        text-gray-700
+                      {% endif %}">
             {{ message }}
           </div>
           <button @click="show = false" class="ml-4 text-gray-400 hover:text-gray-600 font-bold text-lg leading-none">
@@ -41,13 +52,20 @@
           </button>
         </div>
 
-        <!-- progress bar -->
-        <div class="h-1 mt-2 bg-green-200 overflow-hidden rounded">
-          <div class="h-full bg-green-500 animate-toast-progress"></div>
+        <!-- Progress bar -->
+        <div class="h-1 mt-2 bg-gray-200 overflow-hidden rounded">
+          <div class="h-full
+                      {% if category == 'success' %}
+                        bg-green-500
+                      {% elif category == 'error' %}
+                        bg-red-500
+                      {% else %}
+                        bg-gray-500
+                      {% endif %}
+                      animate-toast-progress"></div>
         </div>
       </div>
-    {% endif %}
-  {% endfor %}
+    {% endfor %}
   {% endwith %}
 
 </body>
