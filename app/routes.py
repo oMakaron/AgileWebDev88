@@ -18,11 +18,14 @@ from flask import (
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from matplotlib.pyplot import close
-from requests import post, delete
 
 from app.extensions import db
 from app.models import User, Chart, File, Notification
 from app.models.friend import Friend
+from app.models import User, Chart
+from app.models.friend import Friend
+from app.models.notification import Notification
+from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
 from app.models.shared_data import SharedData
 from app.models.associations import SharedChart
 from app.forms import (
@@ -171,14 +174,7 @@ def delete_account():
 @bp.route('/friends')
 @login_required
 def friends():
-    current_user_id = session['user_id']
-    friends = (
-        db.session.query(User)
-        .join(Friend, Friend.friend_id == User.id)
-        .filter(Friend.user_id == current_user_id)
-        .all()
-    )
-    return render_template('friends.html', friends=friends)
+     return render_template('friends.html')
 
 @bp.route('/unfriend/<int:friend_id>', methods=['DELETE'])
 @login_required
@@ -235,7 +231,6 @@ def add_friend():
                 return redirect(url_for('routes.friends'))
 
     return render_template('add_friend.html', form=form)
-
 
 @bp.route('/share/<int:chart_id>', methods=['GET', 'POST'])
 @login_required
@@ -502,3 +497,9 @@ def mark_notifications_read():
     ).update({'is_read': True})
     db.session.commit()
     return '', 204
+
+@bp.route('/message-received')
+@login_required
+def shared_with_me():
+    flash("This page is currently unavailable.", "info")
+    return redirect(url_for('routes.dashboard'))
