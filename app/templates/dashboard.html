@@ -1,3 +1,4 @@
+{# templates/dashboard.html #}
 {% extends "base.html" %}
 {% block title %}Dashboard – DataVizApp{% endblock %}
 
@@ -6,7 +7,7 @@
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-gray-800">Your Dashboard</h1>
     <a href="{{ url_for('routes.generate_graph') }}"
-      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+       class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
       + Add Chart
     </a>
   </div>
@@ -15,47 +16,40 @@
        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
        style="min-height: 500px;">
     {% for chart in charts %}
-    <div class="chart-card bg-white rounded-lg shadow-md p-4 resize overflow-auto"
-         data-chart-id="{{ chart.id }}">
-      <div class="flex justify-between items-center mb-2">
-        <h2 class="font-semibold text-lg text-gray-700 truncate">{{ chart.name }}</h2>
-        <form action="{{ url_for('routes.delete_chart', chart_id=chart.id) }}"
-              method="post"
-              onsubmit="return confirm('Are you sure you want to delete this chart?');">
-          <button type="submit"
-                  class="text-sm text-red-500 hover:underline">
-            Remove
-          </button>
-        </form>
+      <div class="chart-card bg-white rounded-lg shadow-md p-4 resize overflow-auto"
+           data-chart-id="{{ chart.id }}">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="font-semibold text-lg text-gray-700 truncate">
+            {{ chart.name }}
+          </h2>
+          <form action="{{ url_for('routes.delete_chart', chart_id=chart.id) }}"
+                method="post"
+                onsubmit="return confirm('Are you sure?');">
+            <button type="submit"
+                    class="text-sm text-red-500 hover:underline">Remove</button>
+          </form>
+        </div>
+
+        {# HERE: use the helper property #}
+        {% if chart.image_url %}
+          <img src="{{ chart.image_url }}"
+               alt="Chart {{ chart.name }}"
+               class="w-full rounded border" />
+        {% else %}
+          <p class="text-gray-500 text-sm">No image available.</p>
+        {% endif %}
       </div>
-      <img src="{{ chart.image_url }}"
-        alt="Chart {{ chart.name }}"
-        class="w-full rounded border" />
-    </div>
     {% endfor %}
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<script>
-  // 1) Make the grid sortable
-  Sortable.create(document.getElementById('chartGrid'), {
-    animation: 150,
-    ghostClass: 'bg-yellow-50'
-  });
-
-  // 2) “Remove” only hides the card (does NOT delete from DB)
-  document.querySelectorAll('.remove-btn').forEach(btn =>
-    btn.addEventListener('click', e =>
-      e.target.closest('.chart-card').style.display = 'none'
-    )
-  );
-
-  // 3) Add Chart stub
-  document.getElementById('addChartBtn').addEventListener('click', () => {
-    alert('To-do: show chart picker modal');    // TODO: Replace this with actual chart picker modal
-  });
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script>
+    Sortable.create(document.getElementById('chartGrid'), {
+      animation: 150,
+      ghostClass: 'bg-yellow-50'
+    });
+  </script>
 {% endblock %}

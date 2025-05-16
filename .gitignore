@@ -19,6 +19,7 @@ instance/
 
 # Static files
 app/static/css/output.css
+app/static/chart_images
 
 # Node.js (Tailwind)
 node_modules/

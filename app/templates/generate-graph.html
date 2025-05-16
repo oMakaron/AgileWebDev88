@@ -5,16 +5,17 @@
 <div class="min-h-screen bg-gray-50 py-10 px-6">
   <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-    <!-- 1) CSV Upload -->
+    <!-- CSV Upload Form -->
     <aside class="bg-white shadow-md rounded-xl p-6 space-y-6 col-span-1 h-fit">
       <h2 class="text-xl font-semibold text-gray-800">Upload CSV & Configure</h2>
-      {% with msgs = get_flashed_messages(with_categories=true) %}
-        {% if msgs %}
-        <ul>
-          {% for cat,msg in msgs %}
-            <li class="text-sm {{ 'text-red-600' if cat=='error' else 'text-green-600' }}">{{ msg }}</li>
-          {% endfor %}
-        </ul>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul>
+            {% for category, msg in messages %}
+              <li class="text-sm {{ 'text-red-600' if category=='error' else 'text-green-600' }}">{{ msg }}</li>
+            {% endfor %}
+          </ul>
         {% endif %}
       {% endwith %}
 
@@ -28,15 +29,12 @@
           {{ upload_form.submit_upload(class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700") }}
         </div>
       </form>
-    </aside>
 
-    <!-- 2) Chart Config & Preview/Save -->
-    <aside class="bg-white shadow-md rounded-xl p-6 space-y-6 col-span-1 h-fit">
       {% if show_config %}
         <div class="text-sm text-gray-600">Uploaded: <strong>{{ uploaded_filename }}</strong></div>
 
-        <!-- config & generate -->
-        <form method="POST" class="space-y-4" x-data="{ showAdvanced: false }">
+        <!-- PREVIEW FORM -->
+        <form method="POST" class="space-y-4 mt-4" x-data="{ showAdvanced: false }">
           {{ chart_form.hidden_tag() }}
 
           <div>
@@ -61,7 +59,8 @@
             <span x-text="showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options'"></span>
           </button>
           <div x-show="showAdvanced" x-transition class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            {% for field in [chart_form.title,chart_form.x_label,chart_form.y_label,chart_form.color,chart_form.figsize,chart_form.grid] %}
+            {% for field in [chart_form.title, chart_form.x_label, chart_form.y_label,
+                             chart_form.color, chart_form.figsize, chart_form.grid] %}
               <div>
                 <label class="text-sm text-gray-700">{{ field.label }}</label>
                 {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
@@ -76,31 +75,31 @@
       {% endif %}
     </aside>
 
-    <!-- preview + save button -->
-    <main class="col-span-2 bg-white shadow-md rounded-xl p-8 flex flex-col items-center justify-center min-h-[500px]">
-      {% if chart %}
-        {% if chart.startswith('data:image') %}
-          <img src="{{ chart }}" alt="Chart"
-               class="max-w-full border border-gray-300 rounded shadow mb-4" />
-        {% else %}
-          <img src="{{ url_for('static', filename='chart_images/' ~ chart) }}" alt="Chart"
-               class="max-w-full border border-gray-300 rounded shadow mb-4" />
-        {% endif %}
+    <!-- Chart Preview + SAVE FORM -->
+    <main class="col-span-3 bg-white shadow-md rounded-xl p-8 flex justify-center items-center min-h-[500px]">
+      {% if chart_src %}
+        <div class="flex flex-col items-center gap-4 w-full">
+          {% if chart_src.startswith('data:image') %}
+            <img src="{{ chart_src }}" alt="Chart" class="max-w-4xl w-full border border-gray-300 rounded shadow" />
+          {% else %}
+            <img src="{{ url_for('static', filename='chart_images/' ~ chart_src) }}"
+                 alt="Chart"
+                 class="max-w-4xl w-full border border-gray-300 rounded shadow" />
+          {% endif %}
 
-        <form method="POST">
-          {{ chart_form.csrf_token }}
-          <button name="ch-submit_save"
-                  class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
-            Save Chart
-          </button>
-        </form>
+          <!-- SAVE FORM -->
+          <form method="POST">
+            {{ chart_form.csrf_token }}
+            <input type="hidden" name="action" value="save">
+            {{ chart_form.submit_save(class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700") }}
+          </form>
+        </div>
       {% elif show_config %}
         <p class="text-gray-500">Select chart options and generate a preview.</p>
       {% else %}
         <p class="text-gray-500">Upload a CSV file to begin chart creation.</p>
       {% endif %}
     </main>
-
   </div>
 </div>
 
@@ -111,16 +110,15 @@
   };
 
   function updateChartInputs() {
-    const sel = document.querySelector('[name="ch-graph_type"]');
-    if (!sel) return;
+    const type = document.querySelector('[name="ch-graph_type"]');
+    if (!type) return;
     document.querySelectorAll('[data-chart]').forEach(el => el.style.display = 'none');
-    (showGroups[sel.value]||[]).forEach(g => {
-      document.querySelectorAll(`[data-chart~="${g}"]`).forEach(e=>e.style.display='');
+    (showGroups[type.value]||[]).forEach(group=>{
+      document.querySelectorAll(`[data-chart~="${group}"]`).forEach(el=>el.style.display='');
     });
   }
 
   document.addEventListener('DOMContentLoaded', updateChartInputs);
-  document.querySelector('[name="ch-graph_type"]')
-          ?.addEventListener('change', updateChartInputs);
+  document.querySelector('[name="ch-graph_type"]')?.addEventListener('change', updateChartInputs);
 </script>
 {% endblock %}

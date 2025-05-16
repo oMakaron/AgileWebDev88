@@ -171,14 +171,22 @@ def analytics():
 @bp.route('/generate-graph', methods=['GET','POST'])
 @login_required
 def generate_graph():
+    # Log entry
+    current_app.logger.debug(f"ENTER generate_graph: method={request.method}, session_keys={list(session.keys())}")
+
+    # Bind POST data into chart_form so WTForms sees both buttons
     upload_form = UploadForm(prefix='up')
-    chart_form  = ChartForm(prefix='ch')
-    chart       = None
+    chart_form  = ChartForm(prefix='ch', formdata=request.form)
+
+    chart_src   = None
     show_config = False
     data        = None
 
     # 1) CSV Upload
+    current_app.logger.debug(f"Forms init: up.submit={upload_form.submit_upload.data}, "
+                             f"ch.generate={chart_form.submit_generate.data}, ch.save={chart_form.submit_save.data}")
     if upload_form.submit_upload.data and upload_form.validate_on_submit():
+        current_app.logger.debug("Upload branch triggered")
         raw = upload_form.file.data.read()
         df  = read_csv(BytesIO(raw))
         session['csv_string']       = raw.decode('utf-8')
@@ -193,6 +201,7 @@ def generate_graph():
 
     # 2) Load DataFrame from session
     if 'csv_string' in session:
+        current_app.logger.debug("csv_string found in session; loading DataFrame")
         try:
             data = pd.read_csv(StringIO(session['csv_string']))
             cols = session['columns']
@@ -200,6 +209,7 @@ def generate_graph():
             chart_form.y_col.choices  = [('', '– Select Y –')]      + [(c,c) for c in cols]
             chart_form.column.choices = [('', '– Select column –')] + [(c,c) for c in cols]
             show_config = True
+            current_app.logger.debug(f"Reloaded DataFrame shape: {data.shape}")
         except Exception as e:
             current_app.logger.error("CSV load failed", exc_info=e)
             flash("Could not reload CSV, please re-upload.", "error")
@@ -207,7 +217,7 @@ def generate_graph():
 
     # 3a) Preview
     if data is not None and chart_form.submit_generate.data and chart_form.validate_on_submit():
-        # build full spec including DataFrame
+        current_app.logger.debug("Preview branch triggered")
         spec = {'source': data}
         for fld in ['title','x_label','y_label','color','grid']:
             v = getattr(chart_form, fld).data
@@ -216,7 +226,7 @@ def generate_graph():
             try:
                 w,h = map(int, chart_form.figsize.data.split('x'))
                 spec['figsize'] = (w,h)
-            except:
+            except ValueError:
                 flash("Invalid figure size. Use e.g. 10x6", 'warning')
 
         t = chart_form.graph_type.data
@@ -226,55 +236,67 @@ def generate_graph():
         else:
             spec['column'] = chart_form.column.data
 
-        # draw preview
         bound, _ = registry.functions[t].bind_args(**spec)
-        fig       = registry.functions[t].function(**bound)
-        raw_b64   = save_to_string(fig)
+        fig = registry.functions[t].function(**bound)
+        raw_b64 = save_to_string(fig)
         close(fig)
-        chart     = f"data:image/png;base64,{raw_b64}"
 
-        # store JSON-serializable spec (no DataFrame) for later save
+        chart_src = f"data:image/png;base64,{raw_b64}"
+        current_app.logger.debug(f"Generated preview chart (length={len(raw_b64)} chars)")
+
+        # Store a JSON spec (no DataFrame) for saving later
         store_spec = spec.copy()
         store_spec.pop('source', None)
         session['last_spec'] = json.dumps(store_spec)
+        current_app.logger.debug(f"Stored last_spec in session: {session['last_spec']}")
 
     # 3b) Save to disk
-    elif data is not None and request.method=='POST' and request.form.get('ch-submit_save'):
-        # reload spec
+        # 3b) Save to disk
+    elif data is not None and request.method=='POST' and request.form.get('action')=='save':
+        current_app.logger.debug(f"Save branch triggered; form keys: {list(request.form.keys())}")
+
         if not session.get('last_spec'):
             flash("Please generate a chart before saving.", "error")
         else:
-            store_spec = json.loads(session['last_spec'])
-            store_spec['source'] = data
+            # 1) load the JSON spec (no DataFrame here)
+            spec = json.loads(session['last_spec'])
+            # 2) inject the DataFrame just for figure creation
+            spec['source'] = data
 
-            # draw figure
-            bound, _ = registry.functions[store_spec['graph_type']].bind_args(**store_spec)
-            fig       = registry.functions[store_spec['graph_type']].function(**bound)
+            # 3) rebuild the figure
+            bound, _ = registry.functions[spec['graph_type']].bind_args(**spec)
+            fig = registry.functions[spec['graph_type']].function(**bound)
 
-            # persist Chart record
+            # 4) persist Chart record, but *exclude* the DataFrame from the saved JSON
+            serializable_spec = {k: v for k, v in spec.items() if k != 'source'}
+            chart_json = json.dumps(serializable_spec)
+
             new_chart = Chart(
-                name     = store_spec.get('title','Untitled'),
+                name     = spec.get('title', 'Untitled'),
                 owner_id = session['user_id'],
                 file_id  = session['file_id'],
-                spec     = json.dumps(store_spec)
+                spec     = chart_json
             )
-            db.session.add(new_chart); db.session.commit()
+            db.session.add(new_chart)
+            db.session.commit()
 
-            # save PNG
+            # 5) write the image file
             fname = save_figure_to_file(fig, new_chart.id)
             close(fig)
 
             new_chart.image_path = fname
             db.session.commit()
 
-            chart = fname
+            chart_src = fname
+            current_app.logger.debug(f"Chart saved (id={new_chart.id}), spec={chart_json}")
 
+    current_app.logger.debug(f"Rendering template: chart_src={chart_src}, show_config={show_config}")
     return render_template(
         'generate-graph.html',
         upload_form       = upload_form,
         chart_form        = chart_form,
         show_config       = show_config,
-        chart             = chart,
+        chart_src         = chart_src,
         uploaded_filename = session.get('uploaded_filename')
     )
 
