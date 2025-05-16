@@ -364,22 +364,40 @@ def generate_graph():
 
         t = chart_form.graph_type.data
         spec['graph_type'] = t
+
+        # Required fields validation based on chart type
         if t in ['line', 'bar', 'scatter', 'area', 'box']:
-            spec['x_col'], spec['y_col'] = chart_form.x_col.data, chart_form.y_col.data
+            x = chart_form.x_col.data
+            y = chart_form.y_col.data
+            if not x or not y:
+                flash("Both X and Y axis fields are required for this chart type.", "error")
+                return redirect(url_for('routes.generate_graph'))
+            spec['x_col'], spec['y_col'] = x, y
         else:
-            spec['column'] = chart_form.column.data
+            col = chart_form.column.data
+            if not col:
+                flash("A column must be selected for this chart type.", "error")
+                return redirect(url_for('routes.generate_graph'))
+            spec['column'] = col
 
         bind_spec = spec.copy()
         bind_spec.pop('graph_type', None)
 
-        bound, _ = registry.functions[t].bind_args(**bind_spec)
-        fig = registry.functions[t].function(**bound)
+        try:
+            bound, _ = registry.functions[t].bind_args(**bind_spec)
+            fig = registry.functions[t].function(**bound)
+        except KeyError as e:
+            flash(f"Column '{e.args[0]}' does not exist in the CSV.", "error")
+            return redirect(url_for('routes.generate_graph'))
+        except Exception as e:
+            flash("An error occurred while generating the chart.", "error")
+            current_app.logger.error(f"Chart error: {e}")
+            return redirect(url_for('routes.generate_graph'))
 
         store_spec = spec.copy()
         store_spec.pop('source', None)
         chart_json = json.dumps(store_spec)
 
-        # Save chart
         draft_chart = Chart(
             name=spec.get('title') or 'Untitled',
             owner_id=session['user_id'],
