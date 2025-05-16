@@ -1,5 +1,6 @@
+{# templates/shared_with_me.html #}
 {% extends "base.html" %}
-{% block title %}Message Received{% endblock %}
+{% block title %}Charts Shared With You{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto py-8 space-y-6">
@@ -7,35 +8,60 @@
 
   {% if charts %}
     {% for chart in charts %}
-    <div class="p-4 bg-white shadow-md border border-gray-200 rounded-lg hover:shadow-lg transition">
-      <div class="flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-gray-800">{{ chart.name }}</h2>
+      <div class="p-4 bg-white shadow-md border border-gray-200 rounded-lg hover:shadow-lg transition">
+        <div class="flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-gray-800">{{ chart.name }}</h2>
+          {% if chart.shared_entries and chart.shared_entries[0] %}
+            <span class="text-xs text-gray-500">
+              {{ chart.shared_entries[0].shared_at.strftime('%Y-%m-%d') }}
+            </span>
+          {% endif %}
+        </div>
 
         {% if chart.shared_entries and chart.shared_entries[0] %}
-          <span class="text-xs text-gray-500">
-            {{ chart.shared_entries[0].shared_at.strftime('%Y-%m-%d') }}
-          </span>
+          <p class="text-sm text-gray-600 mb-2">
+            Shared by <strong>{{ chart.shared_entries[0].shared_by_user.fullname }}</strong>
+          </p>
+        {% else %}
+          <p class="text-sm text-gray-600 mb-2 text-red-500">
+            Shared info not available.
+          </p>
         {% endif %}
-      </div>
 
-      {% if chart.shared_entries and chart.shared_entries[0] %}
-        <p class="text-sm text-gray-600 mb-2">
-          Shared by <strong>{{ chart.shared_entries[0].shared_by_user.fullname }}</strong>
-        </p>
-      {% else %}
-        <p class="text-sm text-gray-600 mb-2 text-red-500">
-          Shared info not available.
-        </p>
-      {% endif %}
+        {% if chart.image_path %}
+          <div class="overflow-x-auto max-w-full mb-4">
+            <img
+              src="{{ url_for('static', filename='chart_images/' ~ chart.image_path.split('/')[-1]) }}"
+              alt="Chart Preview"
+              class="max-w-md max-h-64 rounded border border-gray-300 shadow-sm"
+            >
+          </div>
+        {% else %}
+          <p class="text-gray-500 italic mb-4">No preview available.</p>
+        {% endif %}
 
-      {% if chart.image_data %}
-      <div class="overflow-x-auto max-w-full">
-        <img src="data:image/png;base64,{{ chart.image_data }}"
-             alt="Chart Image"
-             class="max-w-md max-h-64 rounded border border-gray-300 shadow-sm">
+        <div class="flex space-x-2">
+          <form action="{{ url_for('routes.import_chart', chart_id=chart.id) }}"
+                method="post">
+            <button
+              type="submit"
+              class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+            >
+              Import to Dashboard
+            </button>
+          </form>
+
+          <form action="{{ url_for('routes.unshare_chart', chart_id=chart.id) }}"
+                method="post">
+            <button
+              type="submit"
+              class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+            >
+              Stop Sharing
+            </button>
+          </form>
+        </div>
       </div>
-      {% endif %}
-    </div>
     {% endfor %}
   {% else %}
     <p class="text-gray-500">No charts have been shared with you yet.</p>

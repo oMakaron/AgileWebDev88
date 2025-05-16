@@ -20,7 +20,15 @@
          data-chart-id="{{ chart.id }}"
          style="top: {{ loop.index0 * 5 }}rem; left: {{ loop.index0 * 22 }}rem">
       <div class="flex justify-between items-center mb-2">
-        <h2 class="font-semibold text-lg text-gray-700 truncate">{{ chart.name }}</h2>
+        {% if shared_id and chart.id == shared_id %}
+          <h2 class="font-semibold text-lg text-purple-700 truncate">
+            Shared with me: {{ chart.name }}
+          </h2>
+        {% else %}
+          <h2 class="font-semibold text-lg text-gray-700 truncate">
+            {{ chart.name }}
+          </h2>
+        {% endif %}
         <form action="{{ url_for('routes.delete_chart', chart_id=chart.id) }}"
               method="post"
               onsubmit="return confirm('Delete this chart?');">
@@ -29,10 +37,12 @@
           </button>
         </form>
       </div>
-      {% if chart.image_url %}
-        <img src="{{ chart.image_url }}"
-             alt="Chart {{ chart.name }}"
-             class="w-full h-auto object-contain rounded border" />
+      {% if chart.image_path %}
+        <img
+          src="{{ url_for('static', filename='chart_images/' ~ chart.image_path.split('/')[-1]) }}"
+          alt="Chart {{ chart.name }}"
+          class="w-full h-auto object-contain rounded border"
+        />
       {% else %}
         <p class="text-gray-500 text-sm">No image available.</p>
       {% endif %}

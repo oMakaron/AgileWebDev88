@@ -115,11 +115,21 @@ def logout():
 def index():
     return render_template("index.html")
 
+# routes.py (only the dashboard route shown – make sure you have `from flask import request` up top)
 @bp.route('/dashboard')
 @login_required
 def dashboard():
+    # fetch all the user's own charts
     charts = Chart.query.filter_by(owner_id=session['user_id']).all()
-    return render_template("dashboard.html", charts=charts)
+
+    # see if we were called with ?shared=<chart_id>
+    shared_id = request.args.get('shared', type=int)
+
+    return render_template(
+        "dashboard.html",
+        charts=charts,
+        shared_id=shared_id
+    )
 
 @bp.route('/profile')
 @login_required
@@ -185,7 +195,7 @@ def friends():
     )
     return render_template('friends.html', friends=friends)
 
-@bp.route('/unfriend/<int:friend_id>', methods=['DELETE'])
+@bp.route('/unfriend/<int:friend_id>', methods=['POST'])
 @login_required
 def unfriend(friend_id):
     current_user_id = session['user_id']
@@ -450,7 +460,8 @@ def save_chart():
         name     = pending['title'],
         owner_id = session['user_id'],
         file_id  = pending['file_id'],
-        spec     = json.dumps(spec_for_db)
+        spec     = json.dumps(spec_for_db),
+        is_imported = False
     )
     db.session.add(chart)
     db.session.commit()
@@ -478,6 +489,48 @@ def save_chart():
     return redirect(url_for('routes.dashboard'))
 
 
+@bp.route('/import-chart/<int:chart_id>', methods=['POST'])
+@login_required
+def import_chart(chart_id):
+    user_id = session['user_id']
+    # make sure it really was shared with you
+    shared = SharedData.query.filter_by(
+        chart_id=chart_id,
+        shared_with_user_id=user_id
+    ).first()
+    if not shared:
+        flash("You don’t have permission to import that chart.", "error")
+        return redirect(url_for('routes.shared_with_me'))
+
+    orig = Chart.query.get(chart_id)
+    # clone it
+    new_chart = Chart(
+        name     = orig.name,
+        owner_id = user_id,
+        file_id  = orig.file_id,
+        spec     = orig.spec,
+        image_path = orig.image_path,
+        is_imported = True
+    )
+    db.session.add(new_chart)
+    db.session.commit()
+
+    flash("Chart imported to your dashboard!", "success")
+    return redirect(url_for('routes.dashboard'))
+
+@bp.route('/charts/<int:chart_id>/unshare', methods=['POST'])
+@login_required
+def unshare_chart(chart_id):
+    sd = SharedData.query.filter_by(
+        chart_id=chart_id,
+        shared_with_user_id=session['user_id']
+    ).first()
+    if sd:
+        db.session.delete(sd)
+        db.session.commit()
+        flash("Stopped sharing this chart with you.", "success")
+    return redirect(url_for('routes.shared_with_me'))
+
 # --------------------------------------------------------------------------------------------------------------------
 # Delete Graph Route
 
@@ -489,38 +542,45 @@ def delete_chart(chart_id):
         flash("Chart not found or not authorized.", "error")
         return redirect(url_for('routes.dashboard'))
 
-    # capture file before deleting chart
-    file = chart.file
-    file_name = file.name
-    uploads_folder = current_app.config['UPLOADS_FOLDER']
-    pattern = f"_{file_name}"
+    if chart.is_imported:
+        # just drop your imported copy
+        db.session.delete(chart)
+        db.session.commit()
+        flash("Removed imported chart from dashboard.", "success")
+    else:
+        # full delete of an original chart: image file, record, and file if unused
+        file = chart.file
+        file_name = file.name
+        uploads_folder = current_app.config['UPLOADS_FOLDER']
+        pattern = f"_{file_name}"
 
-    # delete the chart’s image from disk
-    if chart.image_path:
-        image_path = os.path.join(
-            current_app.root_path,
-            'static', 'chart_images',
-            os.path.basename(chart.image_path)
-        )
-        if os.path.exists(image_path):
-            os.remove(image_path)
+        # delete the chart’s image from disk
+        if chart.image_path:
+            image_path = os.path.join(
+                current_app.root_path,
+                'static', 'chart_images',
+                os.path.basename(chart.image_path)
+            )
+            if os.path.exists(image_path):
+                os.remove(image_path)
 
-    # remove the Chart record
-    db.session.delete(chart)
-    db.session.commit()
-
-    # now delete the File record + any on‐disk CSV if it’s no longer used
-    if not file.charts:
-        for fname in os.listdir(uploads_folder):
-            if fname.endswith(pattern):
-                try:
-                    os.remove(os.path.join(uploads_folder, fname))
-                except Exception as e:
-                    current_app.logger.warning(f"Failed to delete file {fname}: {e}")
-        db.session.delete(file)
+        # remove the Chart record
+        db.session.delete(chart)
         db.session.commit()
 
-    flash("Chart and associated file (if unused) deleted successfully.", "success")
+        # delete the File record + any on-disk CSV if it’s no longer used
+        if not file.charts:
+            for fname in os.listdir(uploads_folder):
+                if fname.endswith(pattern):
+                    try:
+                        os.remove(os.path.join(uploads_folder, fname))
+                    except Exception as e:
+                        current_app.logger.warning(f"Failed to delete file {fname}: {e}")
+            db.session.delete(file)
+            db.session.commit()
+
+        flash("Chart and associated file (if unused) deleted successfully.", "success")
+
     return redirect(url_for('routes.dashboard'))
 
 
