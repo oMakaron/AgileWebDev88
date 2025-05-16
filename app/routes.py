@@ -12,12 +12,12 @@ from matplotlib.pyplot import close
 
 from app.extensions import db
 from app.models import User, Chart
-from app.forms import SignupForm, LoginForm, UploadForm, ChartForm
-from app.models import User
 from app.models.friend import Friend
 from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
-from app.models.chart import Chart
+from app.models.shared_data import SharedData
+from app.models.associations import SharedChart
+from app.services import Parser, registry, read_csv, save_to_string
 
 
 from app.services import Parser, registry, read_csv, save_to_string
@@ -99,6 +99,7 @@ def logout():
     return redirect(url_for('routes.login'))
 
 
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Main Pages
 
@@ -154,6 +155,28 @@ def settings():
     user = db.session.get(User, session['user_id'])
     return render_template('settings.html', user=user)
 
+@bp.route('/delete-account', methods=['POST'])
+@login_required
+def delete_account():
+    user_id = session['user_id']
+
+    with db.session.no_autoflush:
+        charts = Chart.query.filter_by(owner_id=user_id).all()
+        for chart in charts:
+            db.session.delete(chart)
+
+        SharedData.query.filter_by(shared_by_user_id=user_id).delete(synchronize_session=False)
+        SharedData.query.filter_by(shared_with_user_id=user_id).delete(synchronize_session=False)
+
+        user = User.query.get(user_id)
+        db.session.delete(user)
+
+    db.session.commit()
+    session.clear()
+    flash("Your account and related data have been deleted.", "success")
+    return redirect(url_for('routes.login'))
+
+
 
 @bp.route('/friends')
 @login_required
@@ -166,6 +189,92 @@ def friends():
 @login_required
 def add_friend():
     return render_template('add_friend.html')
+
+@bp.route('/share/<int:chart_id>', methods=['GET', 'POST'])
+@login_required
+def share_chart(chart_id):
+    user_id = session['user_id']
+    chart = Chart.query.filter_by(id=chart_id, owner_id=user_id).first()
+    if not chart:
+        flash("You can only share your own charts.")
+        return redirect(url_for('routes.dashboard'))
+
+    if request.method == 'POST':
+        shared_ids = request.form.getlist('shared_with')
+        for fid in shared_ids:
+            entry = SharedChart(
+                chart_id=chart.id,
+                shared_with_user_id=fid,
+                shared_by_user_id=user_id
+            )
+            db.session.add(entry)
+        db.session.commit()
+        flash("Chart shared successfully.")
+        return redirect(url_for('routes.dashboard'))
+
+    friends = get_friends(user_id)
+    return render_template('share.html', chart=chart, friends=friends)
+
+@bp.route('/share-data/<int:friend_id>', methods=['GET', 'POST'])
+@login_required
+def share_data_with_friend(friend_id):
+    user_id = session['user_id']
+    charts = Chart.query.filter_by(owner_id=user_id).all()
+    chart_id = None 
+
+    if request.method == 'POST':
+        chart_id = request.form.get('chart_id')
+
+        if not chart_id:
+            flash("Please select a chart to share.", "error")
+            return redirect(url_for('routes.share_data_with_friend', friend_id=friend_id))
+
+        already_shared = SharedData.query.filter_by(
+            chart_id=chart_id,
+            shared_with_user_id=friend_id,
+            shared_by_user_id=user_id
+        ).first()
+
+        if already_shared and request.form.get('confirm') != 'yes':
+            return render_template("share_data.html", charts=charts, friend_id=friend_id, confirm_chart_id=chart_id)
+
+        new_share = SharedData(
+            chart_id=chart_id,
+            shared_with_user_id=friend_id,
+            shared_by_user_id=user_id
+        )
+        db.session.add(new_share)
+
+        chart = Chart.query.get(chart_id)
+        sharer = User.query.get(user_id)
+        notification = Notification(
+            user_id=friend_id,
+            message=f"{sharer.fullname} shared a chart with you: {chart.name}"
+        )
+        db.session.add(notification)
+
+        db.session.commit()
+        flash("Chart shared successfully!", "success")
+        return redirect(url_for('routes.friends'))
+
+    return render_template("share_data.html", charts=charts, friend_id=friend_id)
+
+
+
+@bp.route('/message-received')
+@login_required
+def shared_with_me():
+    user_id = session['user_id']
+
+    shared_charts = (
+        db.session.query(Chart)
+        .join(SharedData, SharedData.chart_id == Chart.id)
+        .filter(SharedData.shared_with_user_id == user_id)
+        .all()
+    )
+
+    return render_template("shared_with_me.html", charts=shared_charts)
+
 
 
 # ---------------------------------------------------------------------------------------------------------------------
