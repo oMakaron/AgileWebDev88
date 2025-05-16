@@ -3,6 +3,8 @@ from app.extensions import db
 from .base import Base
 
 class Friend(Base):
+    __tablename__ = 'friends'
+
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     friend_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     is_friend = db.Column(db.Boolean, nullable=False, default=False)
