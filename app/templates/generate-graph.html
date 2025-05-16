@@ -8,7 +8,6 @@
     <!-- CSV Upload Form -->
     <aside class="bg-white shadow-md rounded-xl p-6 space-y-6 col-span-1 h-fit">
       <h2 class="text-xl font-semibold text-gray-800">Upload CSV & Configure</h2>
-      <!-- Upload CSV -->
       <form method="POST" enctype="multipart/form-data" class="space-y-4">
         {{ upload_form.hidden_tag() }}
         <div>
@@ -59,8 +58,6 @@
                 {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
               </div>
             {% endfor %}
-
-            <!-- Histogram-only fields -->
             <template x-if="document.querySelector('[name=ch-graph_type]').value === 'histogram'">
               <template>
                 {% for field in [chart_form.bins, chart_form.density, chart_form.cumulative, chart_form.orientation, chart_form.histtype, chart_form.alpha] %}
@@ -71,8 +68,6 @@
                 {% endfor %}
               </template>
             </template>
-
-            <!-- Pie-only fields -->
             <template x-if="document.querySelector('[name=ch-graph_type]').value === 'pie'">
               <template>
                 {% for field in [chart_form.angle, chart_form.explode, chart_form.autopct, chart_form.shadow, chart_form.radius, chart_form.pctdistance, chart_form.labeldistance, chart_form.colors] %}
@@ -96,26 +91,16 @@
     <main class="col-span-3 bg-white shadow-md rounded-xl p-8 flex justify-center items-center min-h-[500px]">
       {% if chart_src %}
         <div class="flex flex-col items-center gap-4 w-full">
-          {% if chart_src.startswith('data:image') %}
-            <img src="{{ chart_src }}" alt="Chart" class="max-w-4xl w-full border border-gray-300 rounded shadow" />
-          {% else %}
-            <img src="{{ url_for('static', filename='chart_images/' ~ chart_src) }}"
-                 alt="Chart"
-                 class="max-w-4xl w-full border border-gray-300 rounded shadow" />
-          {% endif %}
+          <img src="{{ chart_src }}" alt="Chart" class="max-w-4xl w-full border border-gray-300 rounded shadow" />
 
           <!-- Save Chart Button -->
-          {% if session.get('pending_chart') %}
-          <form method="POST" action="{{ url_for('routes.generate_graph') }}">
-            <input type="hidden" name="submit_save" value="1">
-            <input type="hidden" name="image_data" value="{{ chart_src|replace('data:image/png;base64,','') }}">
-            <input type="hidden" name="spec" value="{{ session['pending_chart']['spec'] }}">
-            <input type="hidden" name="file_id" value="{{ session['pending_chart']['file_id'] }}">
-            <input type="hidden" name="name" value="{{ session['pending_chart']['name'] }}">
-            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
-              Save Chart
-            </button>
-          </form>
+          {% if session.get('pending_chart_id') %}
+            <form method="POST" action="{{ url_for('routes.save_chart') }}">
+              <button type="submit"
+                      class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
+                Save Chart
+              </button>
+            </form>
           {% endif %}
         </div>
       {% endif %}
@@ -139,6 +124,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', updateChartInputs);
-  document.querySelector('[name="ch-graph_type"]')?.addEventListener('change', updateChartInputs);
+  document.querySelector('[name="ch-graph_type"]')
+          ?.addEventListener('change', updateChartInputs);
 </script>
 {% endblock %}

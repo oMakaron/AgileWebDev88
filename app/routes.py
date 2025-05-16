@@ -4,6 +4,7 @@ import os
 import uuid
 import json
 import pandas as pd
+import base64
 
 from flask import (
     Blueprint,
@@ -317,139 +318,110 @@ def share_data_with_friend(friend_id):
 @login_required
 def generate_graph():
     upload_form = UploadForm(prefix='up')
-    chart_form = ChartForm(prefix='ch', formdata=request.form)
-    chart_src = None
+    chart_form  = ChartForm(prefix='ch', formdata=request.form)
+    chart_src   = None
     show_config = False
-    data = None
+    data        = None
 
-    # --- File upload handling ---
+    # 1) CSV upload
     if upload_form.submit_upload.data and upload_form.validate_on_submit():
         raw = upload_form.file.data.read()
         filename = secure_filename(upload_form.file.data.filename)
-        uploads_folder = current_app.config['UPLOADS_FOLDER']
-        os.makedirs(uploads_folder, exist_ok=True)
-        saved_name = f"{uuid.uuid4().hex}_{filename}"
-        file_path = os.path.join(uploads_folder, saved_name)
-        with open(file_path, 'wb') as f:
+        folder = current_app.config['UPLOADS_FOLDER']
+        os.makedirs(folder, exist_ok=True)
+        unique = f"{uuid.uuid4().hex}_{filename}"
+        path = os.path.join(folder, unique)
+        with open(path, 'wb') as f:
             f.write(raw)
-
-        session['uploaded_filename'] = filename
-        new_file = File(name=filename, owner_id=session['user_id'])
-        db.session.add(new_file)
+        session['file_id'] = File(name=filename, owner_id=session['user_id'])
+        db.session.add(session['file_id'])
         db.session.commit()
-        session['file_id'] = new_file.id
-
+        session['file_id'] = session['file_id'].id
+        session['uploaded_filename'] = filename
         return redirect(url_for('routes.generate_graph'))
 
-    # --- Load previous upload into DataFrame & configure form choices ---
+    # 2) Load DataFrame & populate choices
     if 'file_id' in session:
         file = File.query.get(session['file_id'])
         if file:
-            uploads_folder = current_app.config['UPLOADS_FOLDER']
-            pattern = f"_{file.name}"
-            matching = [f for f in os.listdir(uploads_folder) if f.endswith(pattern)]
-            if matching:
-                file_path = os.path.join(uploads_folder, matching[0])
-                data = pd.read_csv(file_path)
+            folder = current_app.config['UPLOADS_FOLDER']
+            suffix = f"_{file.name}"
+            candidates = [fn for fn in os.listdir(folder) if fn.endswith(suffix)]
+            if candidates:
+                data = pd.read_csv(os.path.join(folder, candidates[0]))
                 cols = list(data.columns)
                 chart_form.x_col.choices = [('', '– Select X –')] + [(c, c) for c in cols]
                 chart_form.y_col.choices = [('', '– Select Y –')] + [(c, c) for c in cols]
                 chart_form.column.choices = [('', '– Select column –')] + [(c, c) for c in cols]
                 show_config = True
             else:
-                flash("Uploaded file is missing. Please re-upload.", "error")
+                flash("Uploaded file missing; please re-upload.", "error")
                 session.clear()
 
-    # --- Chart generation ---
+    # 3) Preview only—do NOT commit anything
     if data is not None and chart_form.submit_generate.data and chart_form.validate_on_submit():
         spec = {'source': data}
-        # copy over optional fields
-        for fld in ['title', 'x_label', 'y_label', 'color', 'grid']:
+        # copy optional fields
+        for fld in ['title','x_label','y_label','color','grid']:
             v = getattr(chart_form, fld).data
             if v:
                 spec[fld] = v
-
-        # parse figsize if provided
+        # figsize parsing
         if chart_form.figsize.data:
             try:
-                w, h = map(int, chart_form.figsize.data.split('x'))
-                spec['figsize'] = (w, h)
+                w,h = map(int, chart_form.figsize.data.split('x'))
+                spec['figsize'] = (w,h)
             except ValueError:
-                flash("Invalid figure size. Use e.g. 10x6", 'warning')
+                flash("Invalid figure size; use e.g. 10x6", "warning")
 
         t = chart_form.graph_type.data
         spec['graph_type'] = t
 
-        # require both axes for two-axis charts
-        if t in ['line', 'bar', 'scatter', 'area', 'box']:
-            x = chart_form.x_col.data
-            y = chart_form.y_col.data
+        # require correct inputs
+        if t in ['line','bar','scatter','area','box']:
+            x,y = chart_form.x_col.data, chart_form.y_col.data
             if not x or not y:
-                flash("Both X and Y axis fields are required for this chart type.", "error")
+                flash("Both X and Y are required.", "error")
                 return redirect(url_for('routes.generate_graph'))
-            spec['x_col'], spec['y_col'] = x, y
+            spec['x_col'], spec['y_col'] = x,y
         else:
             col = chart_form.column.data
             if not col:
-                flash("A column must be selected for this chart type.", "error")
+                flash("A column must be selected.", "error")
                 return redirect(url_for('routes.generate_graph'))
             spec['column'] = col
 
-        # bind and validate types
-        bind_spec = spec.copy()
-        bind_spec.pop('graph_type', None)
+        # bind & validate types
+        bind_spec = spec.copy(); bind_spec.pop('graph_type',None)
         try:
-            bound, _ = registry.functions[t].bind_args(**bind_spec)
-
-            # only scatter needs numeric X
-            if t == 'scatter':
-                x_col = bound.get('x_col')
-                if not pd.api.types.is_numeric_dtype(data[x_col]):
-                    flash("X axis must be numeric for scatter charts.", "error")
-                    return redirect(url_for('routes.generate_graph'))
-
-            # all two-axis charts need numeric Y
-            if t in ['line', 'scatter', 'bar', 'area', 'box']:
-                y_col = bound.get('y_col')
-                if not pd.api.types.is_numeric_dtype(data[y_col]):
-                    flash("Y axis must be numeric for this chart type.", "error")
-                    return redirect(url_for('routes.generate_graph'))
-
+            bound,_ = registry.functions[t].bind_args(**bind_spec)
+            if t=='scatter' and not pd.api.types.is_numeric_dtype(data[bound['x_col']]):
+                flash("X must be numeric for scatter.", "error")
+                return redirect(url_for('routes.generate_graph'))
+            if t in ['line','scatter','bar','area','box'] and not pd.api.types.is_numeric_dtype(data[bound['y_col']]):
+                flash("Y must be numeric for this chart.", "error")
+                return redirect(url_for('routes.generate_graph'))
             fig = registry.functions[t].function(**bound)
-
         except KeyError as e:
-            flash(f"Column '{e.args[0]}' does not exist in the CSV.", "error")
+            flash(f"Column '{e.args[0]}' not found.", "error")
             return redirect(url_for('routes.generate_graph'))
         except Exception as e:
-            current_app.logger.error(f"Chart generation error: {e}")
-            flash("An error occurred generating the chart. Please check your inputs.", "error")
+            current_app.logger.error(f"Chart gen error: {e}")
+            flash("Error generating chart. Check inputs.", "error")
             return redirect(url_for('routes.generate_graph'))
 
-        # store spec & save chart record
-        store_spec = spec.copy()
-        store_spec.pop('source', None)
-        chart_json = json.dumps(store_spec)
-
-        draft_chart = Chart(
-            name=spec.get('title') or 'Untitled',
-            owner_id=session['user_id'],
-            file_id=session.get('file_id'),
-            spec=chart_json,
-        )
-        db.session.add(draft_chart)
-        db.session.commit()
-
-        # save image file and close figure
-        path = save_figure_to_file(fig, draft_chart.id)
-        draft_chart.image_path = path
-        db.session.commit()
+        # render preview as base64
+        buf = BytesIO(); fig.savefig(buf, format='png'); buf.seek(0)
+        chart_src = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode()
         close(fig)
 
-        session['pending_chart_id'] = draft_chart.id
-        flash("Chart created and saved!", "success")
-        return redirect(url_for('routes.dashboard'))
+        # stash minimal info for save_chart
+        session['pending_spec'] = {k:v for k,v in spec.items() if k!='source'}
+        session['pending_file_id'] = session['file_id']
+        session['pending_title'] = spec.get('title') or 'Untitled'
 
-    # render form
+        show_config = True
+
     return render_template(
         'generate-graph.html',
         upload_form=upload_form,
@@ -463,17 +435,44 @@ def generate_graph():
 @bp.route('/save-chart', methods=['POST'])
 @login_required
 def save_chart():
-    # Grab the draft chart’s ID (stored earlier in session)
-    chart_id = session.pop('pending_chart_id', None)
-    if not chart_id:
-        flash("No chart to save.", "error")
+    pending = {
+        'spec':   session.pop('pending_spec', None),
+        'file_id':session.pop('pending_file_id', None),
+        'title':  session.pop('pending_title', None)
+    }
+    if not pending['spec'] or not pending['file_id']:
+        flash("Nothing to save.", "error")
         return redirect(url_for('routes.generate_graph'))
 
-    # Load it from the DB (so you get its image_path, spec, etc.)
-    chart = Chart.query.filter_by(id=chart_id, owner_id=session['user_id']).first()
-    if not chart:
-        flash("Pending chart not found or unauthorized.", "error")
-        return redirect(url_for('routes.generate_graph'))
+    # 1) Save the Chart record (including graph_type in spec)
+    spec_for_db = pending['spec'].copy()
+    chart = Chart(
+        name     = pending['title'],
+        owner_id = session['user_id'],
+        file_id  = pending['file_id'],
+        spec     = json.dumps(spec_for_db)
+    )
+    db.session.add(chart)
+    db.session.commit()
+
+    # 2) Reload the CSV
+    folder = current_app.config['UPLOADS_FOLDER']
+    file = File.query.get(pending['file_id'])
+    suffix = f"_{file.name}"
+    fn = next(fn for fn in os.listdir(folder) if fn.endswith(suffix))
+    data = pd.read_csv(os.path.join(folder, fn))
+
+    # 3) Prepare args for the plot function
+    spec_for_plot = spec_for_db.copy()
+    graph_type    = spec_for_plot.pop('graph_type')   # <-- remove this!
+    spec_for_plot['source'] = data
+
+    # 4) Regenerate and save the figure
+    fig = registry.functions[graph_type].function(**spec_for_plot)
+    path = save_figure_to_file(fig, chart.id)
+    chart.image_path = path
+    db.session.commit()
+    close(fig)
 
     flash("Chart saved to dashboard!", "success")
     return redirect(url_for('routes.dashboard'))
