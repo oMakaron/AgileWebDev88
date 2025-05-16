@@ -94,7 +94,7 @@
           <img src="{{ chart_src }}" alt="Chart" class="max-w-4xl w-full border border-gray-300 rounded shadow" />
 
           <!-- Save Chart Button -->
-          {% if session.get('pending_chart_id') %}
+          {% if session.get('pending_spec') %}
             <form method="POST" action="{{ url_for('routes.save_chart') }}">
               <button type="submit"
                       class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
