@@ -7,7 +7,7 @@ from ..extensions import db
 
 notifications = Blueprint('notifications', __name__, url_prefix='/notifications')
 
-@event.listens_for(SharedData, 'after_update')
+'''@event.listens_for(SharedData, 'after_update')
 def chart_notif(mapper, connection, target):
     notif = Notification.__table__
     chart = Chart.query.get(target.chart_id)
@@ -55,7 +55,7 @@ def unfriend_notif(mapper, connection, target):
                                       href= url_for('routes.friends'))
             )
         except Exception:
-            pass
+            pass'''
 
 @notifications.route('/', methods=['GET'])
 @require_login
