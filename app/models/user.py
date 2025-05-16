@@ -1,10 +1,7 @@
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import and_
-from sqlalchemy.orm import foreign
 
 from ..extensions import db
 from .base import Base
-from .friend import Friend
 
 
 class User(Base):
