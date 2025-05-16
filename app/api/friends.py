@@ -14,7 +14,7 @@ def get_friends() -> Response:
     user = User.query.get_or_404(user_id)
     friend_dict = {'requested': Friend.query.filter_by(user_id=user.id, is_friend=False).all(), 
                    'requests': Friend.query.filter_by(friend_id=user.id, is_friend=False).all(), 
-                   'friends': User.friends}
+                   'friends': Friend.query.filter_by(user_id=user_id, is_friend=True).all()}
     
     if(type):
         try:
