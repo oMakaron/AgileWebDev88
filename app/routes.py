@@ -386,21 +386,36 @@ def generate_graph():
         try:
             bound, _ = registry.functions[t].bind_args(**bind_spec)
 
-            # 🔒 Validation for box plots: y_col must be numeric
-            if t == 'box':
-                y_col = bound.get('y_col')
+            # Extra validation for numeric-only charts
+            if t in ['line', 'scatter', 'bar', 'area', 'box']:
+                x_col = bound.get("x_col")
+                y_col = bound.get("y_col")
+                if x_col and not pd.api.types.is_numeric_dtype(data[x_col]):
+                    flash("X axis must be numeric for this chart type.", "error")
+                    return redirect(url_for("routes.generate_graph"))
                 if y_col and not pd.api.types.is_numeric_dtype(data[y_col]):
-                    flash("Y axis must contain numerical data for box plots.", "error")
-                    return redirect(url_for('routes.generate_graph'))
+                    flash("Y axis must be numeric for this chart type.", "error")
+                    return redirect(url_for("routes.generate_graph"))
+
+            # Handle invalid figsize earlier
+            if chart_form.figsize.data:
+                try:
+                    w, h = map(int, chart_form.figsize.data.lower().split('x'))
+                    spec['figsize'] = (w, h)
+                except ValueError:
+                    flash("Invalid figure size. Use e.g. 10x6", "warning")
+                    return redirect(url_for("routes.generate_graph"))
 
             fig = registry.functions[t].function(**bound)
+
         except KeyError as e:
             flash(f"Column '{e.args[0]}' does not exist in the CSV.", "error")
-            return redirect(url_for('routes.generate_graph'))
+            return redirect(url_for("routes.generate_graph"))
+
         except Exception as e:
-            flash("An error occurred while generating the chart.", "error")
-            current_app.logger.error(f"Chart error: {e}")
-            return redirect(url_for('routes.generate_graph'))
+            current_app.logger.error(f"Chart generation error: {e}")
+            flash("An error occurred while generating the chart. Please check axis and input types.", "error")
+            return redirect(url_for("routes.generate_graph"))
 
         store_spec = spec.copy()
         store_spec.pop('source', None)
