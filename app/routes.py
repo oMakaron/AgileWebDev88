@@ -385,6 +385,14 @@ def generate_graph():
 
         try:
             bound, _ = registry.functions[t].bind_args(**bind_spec)
+
+            # 🔒 Validation for box plots: y_col must be numeric
+            if t == 'box':
+                y_col = bound.get('y_col')
+                if y_col and not pd.api.types.is_numeric_dtype(data[y_col]):
+                    flash("Y axis must contain numerical data for box plots.", "error")
+                    return redirect(url_for('routes.generate_graph'))
+
             fig = registry.functions[t].function(**bound)
         except KeyError as e:
             flash(f"Column '{e.args[0]}' does not exist in the CSV.", "error")
