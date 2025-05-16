@@ -522,7 +522,7 @@ def inject_notifications():
     if 'user_id' in session:
         notifs = Notification.query.filter_by(
             user_id=session['user_id']
-        ).order_by(Notification.timestamp.desc()).limit(10).all()
+        ).order_by(Notification.created_at.desc()).limit(10).all()
         
         unread_count = Notification.query.filter_by(
             user_id=session['user_id'],

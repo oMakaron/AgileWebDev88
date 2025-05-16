@@ -131,7 +131,7 @@
                 {% for n in notifications %}
                   <li class="p-4 text-sm text-gray-800 hover:bg-gray-100 {% if not n.is_read %} bg-blue-50 {% endif %}">
                     {{ n.message }}
-                    <div class="text-xs text-gray-500 mt-1">{{ moment(n.timestamp).fromNow() }}</div>
+                    <div class="text-xs text-gray-500 mt-1">{{ moment(n.created_at).fromNow() }}</div>
                   </li>
                 {% endfor %}
               {% else %}
