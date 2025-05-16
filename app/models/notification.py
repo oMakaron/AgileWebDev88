@@ -1,6 +1,5 @@
 from ..extensions import db
 from .base import Base
-from datetime import datetime, timezone
 
 class Notification(Base):
     __tablename__ = 'notification'

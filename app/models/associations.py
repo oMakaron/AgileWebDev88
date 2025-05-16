@@ -14,7 +14,6 @@ class SharedFile(Base):
 class SharedChart(Base):
     __tablename__ = 'shared_charts'
 
-    id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     chart_id = db.Column(db.Integer, db.ForeignKey('charts.id'), nullable=False)
 
