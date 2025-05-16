@@ -14,8 +14,12 @@ class SharedFile(Base):
 class SharedChart(Base):
     __tablename__ = 'shared_charts'
 
-    chart_id = db.Column(db.Integer, db.ForeignKey('charts.id'), primary_key=True)
-    user_id  = db.Column(db.Integer, db.ForeignKey('users.id'),    primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    chart_id = db.Column(db.Integer, db.ForeignKey('charts.id'), nullable=False)
 
+    privilege = db.Column(db.String(5), nullable=False)
+
+    user = db.relationship('User', back_populates='shared_charts')
     chart = db.relationship('Chart', back_populates='shared_with')
-    user  = db.relationship('User',  back_populates='shared_charts')
+

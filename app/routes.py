@@ -286,7 +286,15 @@ def delete_chart(chart_id):
         flash("Chart not found or not authorized.", "error")
         return redirect(url_for('routes.dashboard'))
 
+    # Delete the image file from disk
+    if chart.image_path:
+        image_path = os.path.join(current_app.root_path, 'static', 'chart_images', os.path.basename(chart.image_path))
+        if os.path.exists(image_path):
+            os.remove(image_path)
+
+    # Delete the chart from the database
     db.session.delete(chart)
     db.session.commit()
+
     flash("Chart deleted successfully.", "success")
     return redirect(url_for('routes.dashboard'))
