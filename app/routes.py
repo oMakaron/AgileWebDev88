@@ -14,7 +14,7 @@ from requests import post, delete
 from app.extensions import db
 from app.models import User, Chart
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm
-from app.models import User
+from app.models import User, Notification
 from app.models.friend import Friend
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
 from app.models.chart import Chart
