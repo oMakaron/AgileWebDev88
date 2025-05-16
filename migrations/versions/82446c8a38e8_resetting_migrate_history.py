@@ -1,8 +1,8 @@
-"""add friend
+"""resetting migrate history
 
-Revision ID: 633e4d1e550b
+Revision ID: 82446c8a38e8
 Revises: 
-Create Date: 2025-05-13 20:25:43.569598
+Create Date: 2025-05-15 20:20:16.530004
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '633e4d1e550b'
+revision = '82446c8a38e8'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -38,19 +38,33 @@ def upgrade():
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('friend',
-    sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('friend_id', sa.Integer(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['friend_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'friend_id', name='unique_friendship')
+    )
+    op.create_table('notification',
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('message', sa.String(length=255), nullable=False),
+    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('is_read', sa.Boolean(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('charts',
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('owner_id', sa.Integer(), nullable=False),
     sa.Column('file_id', sa.Integer(), nullable=False),
     sa.Column('spec', sa.Text(), nullable=False),
+    sa.Column('image_data', sa.Text(), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
@@ -82,6 +96,7 @@ def downgrade():
     op.drop_table('shared_charts')
     op.drop_table('shared_files')
     op.drop_table('charts')
+    op.drop_table('notification')
     op.drop_table('friend')
     op.drop_table('files')
     op.drop_table('users')
