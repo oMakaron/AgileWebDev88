@@ -119,8 +119,8 @@ class EditProfileForm(FlaskForm):
     name = StringField('Full Name', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('New Password (optional)', validators=[Optional()])
-    submit = SubmitField('Save Changes')
 
 class AddFriendForm(FlaskForm):
     user_id = StringField('User ID', validators=[DataRequired()])
     submit = SubmitField('Add Friend')
+    submit = SubmitField('Save Changes')
