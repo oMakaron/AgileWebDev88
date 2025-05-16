@@ -21,8 +21,9 @@ class User(Base):
     shared_charts = db.relationship('SharedChart', back_populates='user')
 
     friends = db.relationship('Friend', 
-                              primary_join=and_(id == foreign(Friend.user_id), foreign(Friend.is_friend) == True),
-                              lazy='dynamic')
+                              primaryjoin=and_(id == foreign(Friend.user_id), foreign(Friend.is_friend) == True),
+                              lazy='dynamic',
+                              viewonly=True)
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
