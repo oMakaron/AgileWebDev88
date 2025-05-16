@@ -4,7 +4,7 @@ from multiprocessing import Process
 from selenium.webdriver import Firefox, FirefoxOptions
 
 from app import create_app, db
-from app.models import User
+from app.models import User, Chart
 from config import TestConfig
 
 
@@ -50,4 +50,11 @@ class TestBase(TestCase):
         db.session.add(user)
         db.session.commit()
         return user
+
+    @staticmethod
+    def create_chart(name, owner, file, spec):
+        chart = Chart(name=name, owner_id=owner, file_id=file, spec=spec) # type: ignore
+        db.session.add(chart)
+        db.session.commit()
+        return chart
 
