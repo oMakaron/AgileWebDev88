@@ -9,17 +9,13 @@ from flask import (
 )
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
-from requests import post, delete, patch
+from requests import patch
 
 from app.extensions import db
 from app.models import User, Chart
-from app.forms import SignupForm, LoginForm, UploadForm, ChartForm
-from app.models import User, Notification
 from app.models.friend import Friend
 from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
-from app.models.chart import Chart
-
 from app.models.shared_data import SharedData
 from app.models.associations import SharedChart
 from app.services import Parser, registry, read_csv, save_to_string
@@ -183,54 +179,14 @@ def delete_account():
 @bp.route('/friends')
 @login_required
 def friends():
-    current_user_id = session['user_id']
-    friends = User.query.filter_by(id=current_user_id).first().friends
-    return render_template('friends.html', friends=friends)
+     return render_template('friends.html')
 
-
-@bp.route('/unfriend/<int:friend_id>', methods=['DELETE'])
-@login_required
-def unfriend(friend_id):
-    full_url = request.host_url.rstrip('/') + url_for('friends.unfriend', target_id=friend_id)
-    response = delete(full_url)
-    if response.status_code == 204:
-        flash("User unfollowed successfully!", "success")
-    else:
-        flash(f"Error {response.status_code}", "error")
-
-    return redirect(url_for('routes.friends'))
 
 
 @bp.route('/add-friend', methods=['GET', 'POST'])
 @login_required
 def add_friend():
-    form = AddFriendForm()
-    current_user_id = session['user_id']
-
-    if form.validate_on_submit():
-        target_user = User.query.filter_by(id=form.user_id.data).first()
-
-        if not target_user:
-            flash("User ID not found.", "error")
-        elif target_user.id == current_user_id:
-            flash("You cannot add yourself as a friend.", "error")
-        else:
-            existing = Friend.query.filter_by(user_id=current_user_id, friend_id=target_user.id).first()
-            if existing:
-                if existing.is_friend():
-                    flash("This user is already your friend.", "info")
-                else:
-                    flash("You have requested to add this friend", "info")
-            else:
-                full_url = request.host_url.rstrip('/') + url_for('friends.request_add', target_id=target_user.id)
-                response = post(full_url)
-                if response.status_code == 201:
-                    flash(f"User '{target_user.fullname}' followed successfully!", "success")
-                    return redirect(url_for('routes.friends'))
-                else:
-                    flash(f"Error {response.status_code}", "error")
-
-    return render_template('add_friend.html', form=form)
+    return render_template('add_friend.html')
 
 @bp.route('/share/<int:chart_id>', methods=['GET', 'POST'])
 @login_required
@@ -364,6 +320,31 @@ def generate_graph():
             session.clear()
 
     # --- 3. Chart Generation ---
+    # --- Handle Save Chart button ---
+    if request.method == "POST" and request.form.get("submit_save"):
+        # Retrieve from form instead of session
+        name       = request.form.get("name") or "Untitled"
+        spec       = request.form.get("spec") or "{}"
+        image_data = request.form.get("image_data")
+        file_id    = request.form.get("file_id")
+
+        if not image_data:
+            flash("No chart to save.", "error")
+            return redirect(url_for('routes.generate_graph'))
+
+        chart = Chart(
+            name       = name,
+            owner_id   = session['user_id'],
+            file_id    = file_id,
+            spec       = spec,
+            image_data = image_data
+        )
+        db.session.add(chart)
+        db.session.commit()
+
+        flash("Chart saved to dashboard!", "success")
+        return redirect(url_for('routes.dashboard'))
+
     if chart_form.submit_generate.data and chart_form.validate_on_submit() and data is not None:
         try:
             plot_type = chart_form.graph_type.data
@@ -405,28 +386,24 @@ def generate_graph():
 
             # Generate the figure
             bound, _ = plotter.bind_args(**args)
-            fig       = plotter.function(**bound)
+            fig = plotter.function(**bound)
 
-            # Capture raw base64 (no prefix) for preview + storage
             raw_b64 = save_to_string(fig)
-            chart   = f"data:image/png;base64,{raw_b64}"
             close(fig)
 
-            # Clean up for DB
             args.pop('source', None)
             args['graph_type'] = plot_type
 
-            # Save Chart with image_data
-            from app.models import Chart
-            new_chart = Chart(
-                name       = args.get('title') or 'Untitled',
-                owner_id   = session['user_id'],
-                file_id    = session.get('file_id'),
-                spec       = json.dumps(args),
-                image_data = raw_b64
-            )
-            db.session.add(new_chart)
-            db.session.commit()
+            # Store chart in session
+            session['pending_chart'] = {
+                'name': args.get('title') or 'Untitled',
+                'spec': json.dumps(args),
+                'image_data': raw_b64,
+                'file_id': session.get('file_id')
+            }
+
+            # Assign to `chart` so it renders in preview
+            chart = f"data:image/png;base64,{raw_b64}"
 
         except Exception as e:
             current_app.logger.error("Chart generation failed", exc_info=e)
@@ -440,6 +417,45 @@ def generate_graph():
         chart             = chart,
         uploaded_filename = session.get('uploaded_filename')
     )
+
+@bp.route('/save-chart', methods=['POST'])
+@login_required
+def save_chart():
+    pending = session.get('pending_chart')
+    if not pending:
+        flash("No chart to save.", "error")
+        return redirect(url_for('routes.generate_graph'))
+
+    chart = Chart(
+        name       = pending['name'],
+        owner_id   = session['user_id'],
+        file_id    = pending.get('file_id'),
+        spec       = pending['spec'],
+        image_data = pending['image_data']
+    )
+    db.session.add(chart)
+    db.session.commit()
+    session.pop('pending_chart', None)
+
+    flash("Chart saved to dashboard!", "success")
+    return redirect(url_for('routes.dashboard'))
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Delete Graph Route
+
+@bp.route('/charts/<int:chart_id>/delete', methods=['POST'])
+@login_required
+def delete_chart(chart_id):
+    chart = Chart.query.filter_by(id=chart_id, owner_id=session['user_id']).first()
+    if not chart:
+        flash("Chart not found or not authorized.", "error")
+        return redirect(url_for('routes.dashboard'))
+
+    db.session.delete(chart)
+    db.session.commit()
+    flash("Chart deleted successfully.", "success")
+    return redirect(url_for('routes.dashboard'))
 
 @bp.context_processor
 def inject_notifications():
@@ -456,6 +472,14 @@ def inject_notifications():
         return dict(notifications=notifs, unread_count=unread_count)
     return dict(notifications=[], unread_count=0)
 
+@bp.route('/notifications/read', methods=['POST'])
+@login_required
+def mark_notifications_read():
+    from app.models.notification import Notification
+    Notification.query.filter_by(user_id=session['user_id'], is_read=False).update({'is_read': True})
+    db.session.commit()
+    return '', 204
+
 @bp.route('/notifications/read/<int:notif_id>', methods=['PATCH'])
 @login_required
 def mark_notifications_read(notif_id):
@@ -468,10 +492,3 @@ def mark_notifications_read(notif_id):
     except Exception:
         flash('error handling notification', 'error')
     return redirect(url_for('routes.dashboard'))
-
-#for later after will's html
-'''
-full_url = request.host_url.rstrip('/') + url_for('notifications.get_notifs')
-response = get(full_url)
-return render_template('.html', ls=repsponse.json())
-'''

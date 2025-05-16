@@ -5,3 +5,4 @@ from .associations import SharedFile, SharedChart
 from .friend import Friend
 from .shared_data import SharedData
 from .notification import Notification
+
