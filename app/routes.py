@@ -9,15 +9,15 @@ from flask import (
 )
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
-from requests import post, delete
 
 from app.extensions import db
 from app.models import User, Chart
-from app.forms import SignupForm, LoginForm, UploadForm, ChartForm
-from app.models import User, Notification
 from app.models.friend import Friend
+from app.models.notification import Notification
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
-from app.models.chart import Chart
+from app.models.shared_data import SharedData
+from app.models.associations import SharedChart
+from app.services import Parser, registry, read_csv, save_to_string
 
 
 from app.services import Parser, registry, read_csv, save_to_string
@@ -99,6 +99,7 @@ def logout():
     return redirect(url_for('routes.login'))
 
 
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Main Pages
 
@@ -154,76 +155,126 @@ def settings():
     user = db.session.get(User, session['user_id'])
     return render_template('settings.html', user=user)
 
+@bp.route('/delete-account', methods=['POST'])
+@login_required
+def delete_account():
+    user_id = session['user_id']
+
+    with db.session.no_autoflush:
+        charts = Chart.query.filter_by(owner_id=user_id).all()
+        for chart in charts:
+            db.session.delete(chart)
+
+        SharedData.query.filter_by(shared_by_user_id=user_id).delete(synchronize_session=False)
+        SharedData.query.filter_by(shared_with_user_id=user_id).delete(synchronize_session=False)
+
+        user = User.query.get(user_id)
+        db.session.delete(user)
+
+    db.session.commit()
+    session.clear()
+    flash("Your account and related data have been deleted.", "success")
+    return redirect(url_for('routes.login'))
+
+
 
 @bp.route('/friends')
 @login_required
 def friends():
-    current_user_id = session['user_id']
-    friends = (
-        db.session.query(User)
-        .join(Friend, Friend.friend_id == User.id)
-        .filter(Friend.user_id == current_user_id)
-        .all()
-    )
-    return render_template('friends.html', friends=friends)
+     return render_template('friends.html')
 
-
-@bp.route('/unfriend/<int:friend_id>', methods=['DELETE'])
-@login_required
-def unfriend(friend_id):
-    current_user_id = session['user_id']
-    relation = Friend.query.filter_by(user_id=current_user_id, friend_id=friend_id).first()
-    reverse_relation = Friend.query.filter_by(user_id=friend_id, friend_id=current_user_id).first()
-
-    if relation:
-        db.session.delete(relation)
-    if reverse_relation:
-        db.session.delete(reverse_relation)
-    user = User.query.get(current_user_id)
-    notification = Notification(
-        user_id=friend_id,
-        message=f"{user.fullname} removed you from friends list."
-    )
-    db.session.add(notification)
-
-    db.session.commit()
-    flash("Friend removed successfully!", "success")
-    return redirect(url_for('routes.friends'))
 
 
 @bp.route('/add-friend', methods=['GET', 'POST'])
 @login_required
 def add_friend():
-    form = AddFriendForm()
-    current_user_id = session['user_id']
+    return render_template('add_friend.html')
 
-    if form.validate_on_submit():
-        target_user = User.query.filter_by(id=form.user_id.data).first()
+@bp.route('/share/<int:chart_id>', methods=['GET', 'POST'])
+@login_required
+def share_chart(chart_id):
+    user_id = session['user_id']
+    chart = Chart.query.filter_by(id=chart_id, owner_id=user_id).first()
+    if not chart:
+        flash("You can only share your own charts.")
+        return redirect(url_for('routes.dashboard'))
 
-        if not target_user:
-            flash("User ID not found.", "error")
-        elif target_user.id == current_user_id:
-            flash("You cannot add yourself as a friend.", "error")
-        else:
-            existing = Friend.query.filter_by(user_id=current_user_id, friend_id=target_user.id).first()
-            if existing:
-                flash("This user is already your friend.", "info")
-            else:
-                db.session.add(Friend(user_id=current_user_id, friend_id=target_user.id))
-                db.session.add(Friend(user_id=target_user.id, friend_id=current_user_id))
+    if request.method == 'POST':
+        shared_ids = request.form.getlist('shared_with')
+        for fid in shared_ids:
+            entry = SharedChart(
+                chart_id=chart.id,
+                shared_with_user_id=fid,
+                shared_by_user_id=user_id
+            )
+            db.session.add(entry)
+        db.session.commit()
+        flash("Chart shared successfully.")
+        return redirect(url_for('routes.dashboard'))
 
-                from app.models.notification import Notification
-                notify = Notification(
-                    user_id=target_user.id,
-                    message=f"{User.query.get(current_user_id).fullname} added you as a friend!"
-                )
-                db.session.add(notify)
+    friends = get_friends(user_id)
+    return render_template('share.html', chart=chart, friends=friends)
 
-                db.session.commit()
-                flash(f"Friend '{target_user.fullname}' added successfully!", "success")
-                return redirect(url_for('routes.friends'))
+@bp.route('/share-data/<int:friend_id>', methods=['GET', 'POST'])
+@login_required
+def share_data_with_friend(friend_id):
+    user_id = session['user_id']
+    charts = Chart.query.filter_by(owner_id=user_id).all()
+    chart_id = None 
 
-    return render_template('add_friend.html', form=form)
+    if request.method == 'POST':
+        chart_id = request.form.get('chart_id')
+
+        if not chart_id:
+            flash("Please select a chart to share.", "error")
+            return redirect(url_for('routes.share_data_with_friend', friend_id=friend_id))
+
+        already_shared = SharedData.query.filter_by(
+            chart_id=chart_id,
+            shared_with_user_id=friend_id,
+            shared_by_user_id=user_id
+        ).first()
+
+        if already_shared and request.form.get('confirm') != 'yes':
+            return render_template("share_data.html", charts=charts, friend_id=friend_id, confirm_chart_id=chart_id)
+
+        new_share = SharedData(
+            chart_id=chart_id,
+            shared_with_user_id=friend_id,
+            shared_by_user_id=user_id
+        )
+        db.session.add(new_share)
+
+        chart = Chart.query.get(chart_id)
+        sharer = User.query.get(user_id)
+        notification = Notification(
+            user_id=friend_id,
+            message=f"{sharer.fullname} shared a chart with you: {chart.name}"
+        )
+        db.session.add(notification)
+
+        db.session.commit()
+        flash("Chart shared successfully!", "success")
+        return redirect(url_for('routes.friends'))
+
+    return render_template("share_data.html", charts=charts, friend_id=friend_id)
+
+
+
+@bp.route('/message-received')
+@login_required
+def shared_with_me():
+    user_id = session['user_id']
+
+    shared_charts = (
+        db.session.query(Chart)
+        .join(SharedData, SharedData.chart_id == Chart.id)
+        .filter(SharedData.shared_with_user_id == user_id)
+        .all()
+    )
+
+    return render_template("shared_with_me.html", charts=shared_charts)
+
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -271,6 +322,31 @@ def generate_graph():
             session.clear()
 
     # --- 3. Chart Generation ---
+    # --- Handle Save Chart button ---
+    if request.method == "POST" and request.form.get("submit_save"):
+        # Retrieve from form instead of session
+        name       = request.form.get("name") or "Untitled"
+        spec       = request.form.get("spec") or "{}"
+        image_data = request.form.get("image_data")
+        file_id    = request.form.get("file_id")
+
+        if not image_data:
+            flash("No chart to save.", "error")
+            return redirect(url_for('routes.generate_graph'))
+
+        chart = Chart(
+            name       = name,
+            owner_id   = session['user_id'],
+            file_id    = file_id,
+            spec       = spec,
+            image_data = image_data
+        )
+        db.session.add(chart)
+        db.session.commit()
+
+        flash("Chart saved to dashboard!", "success")
+        return redirect(url_for('routes.dashboard'))
+
     if chart_form.submit_generate.data and chart_form.validate_on_submit() and data is not None:
         try:
             plot_type = chart_form.graph_type.data
@@ -312,28 +388,24 @@ def generate_graph():
 
             # Generate the figure
             bound, _ = plotter.bind_args(**args)
-            fig       = plotter.function(**bound)
+            fig = plotter.function(**bound)
 
-            # Capture raw base64 (no prefix) for preview + storage
             raw_b64 = save_to_string(fig)
-            chart   = f"data:image/png;base64,{raw_b64}"
             close(fig)
 
-            # Clean up for DB
             args.pop('source', None)
             args['graph_type'] = plot_type
 
-            # Save Chart with image_data
-            from app.models import Chart
-            new_chart = Chart(
-                name       = args.get('title') or 'Untitled',
-                owner_id   = session['user_id'],
-                file_id    = session.get('file_id'),
-                spec       = json.dumps(args),
-                image_data = raw_b64
-            )
-            db.session.add(new_chart)
-            db.session.commit()
+            # Store chart in session
+            session['pending_chart'] = {
+                'name': args.get('title') or 'Untitled',
+                'spec': json.dumps(args),
+                'image_data': raw_b64,
+                'file_id': session.get('file_id')
+            }
+
+            # Assign to `chart` so it renders in preview
+            chart = f"data:image/png;base64,{raw_b64}"
 
         except Exception as e:
             current_app.logger.error("Chart generation failed", exc_info=e)
@@ -347,3 +419,42 @@ def generate_graph():
         chart             = chart,
         uploaded_filename = session.get('uploaded_filename')
     )
+
+@bp.route('/save-chart', methods=['POST'])
+@login_required
+def save_chart():
+    pending = session.get('pending_chart')
+    if not pending:
+        flash("No chart to save.", "error")
+        return redirect(url_for('routes.generate_graph'))
+
+    chart = Chart(
+        name       = pending['name'],
+        owner_id   = session['user_id'],
+        file_id    = pending.get('file_id'),
+        spec       = pending['spec'],
+        image_data = pending['image_data']
+    )
+    db.session.add(chart)
+    db.session.commit()
+    session.pop('pending_chart', None)
+
+    flash("Chart saved to dashboard!", "success")
+    return redirect(url_for('routes.dashboard'))
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Delete Graph Route
+
+@bp.route('/charts/<int:chart_id>/delete', methods=['POST'])
+@login_required
+def delete_chart(chart_id):
+    chart = Chart.query.filter_by(id=chart_id, owner_id=session['user_id']).first()
+    if not chart:
+        flash("Chart not found or not authorized.", "error")
+        return redirect(url_for('routes.dashboard'))
+
+    db.session.delete(chart)
+    db.session.commit()
+    flash("Chart deleted successfully.", "success")
+    return redirect(url_for('routes.dashboard'))
