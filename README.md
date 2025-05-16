@@ -13,7 +13,7 @@ The design of the application focuses on being simple, useful, and clean. It use
 | 23810522 | Yuki Wei      | yuki-kii        |
 | 23821639 | Daniel Jones  | DanielEJones    |
 | 24328931 | Nick Alexander| oMakaron        |
-| 23920389 | Will Vetter   | William Vetter  |
+| 23920389 | Will Vetter   | WillVetter      |
 
 ## Getting Set Up
 The below steps should be sufficient to get the project up and running on your local machine (at least for Unix-like operating systems).
