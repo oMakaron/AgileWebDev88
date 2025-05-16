@@ -2,6 +2,7 @@ from shutil import which
 from subprocess import check_call
 from sys import executable, platform
 from pathlib import Path
+import os
 
 
 def main():
@@ -39,6 +40,14 @@ def main():
         "-i", "app/static/css/input.css",
         "-o", "app/static/css/output.css"
     ])
+
+    # Ensure chart_images directory exists
+    chart_img_path = Path("app/static/chart_images")
+    if not chart_img_path.exists():
+        print("Creating chart_images directory...")
+        os.makedirs(chart_img_path)
+    else:
+        print("chart_images directory already exists.")
 
     env_path = Path(".env")
     if not env_path.exists():
