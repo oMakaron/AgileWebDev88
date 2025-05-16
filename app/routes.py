@@ -210,7 +210,7 @@ def share_chart(chart_id):
         flash("Chart shared successfully.")
         return redirect(url_for('routes.dashboard'))
 
-    friends = User.query.get(user_id).friends
+    friends = get_friends(user_id)
     return render_template('share.html', chart=chart, friends=friends)
 
 @bp.route('/share-data/<int:friend_id>', methods=['GET', 'POST'])
