@@ -457,4 +457,4 @@ def delete_chart(chart_id):
     db.session.delete(chart)
     db.session.commit()
     flash("Chart deleted successfully.", "success")
-    return redirect(url_for('routes.dashboard')
+    return redirect(url_for('routes.dashboard'))
