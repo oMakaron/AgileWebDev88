@@ -7,7 +7,7 @@ from ..extensions import db
 from .utils import require_login, get_user, UPLOADS_FOLDER
 
 
-files = Blueprint('files', __name__)
+files = Blueprint('files', __name__, url_prefix='/files')
 
 
 @files.route('/', methods=["GET"])

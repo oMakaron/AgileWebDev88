@@ -1,23 +1,46 @@
 from functools import wraps
 from io import BytesIO
-import pandas as pd
+import os
+import uuid
 import json
-import os, uuid
+import pandas as pd
+
 from flask import (
-    Blueprint, render_template, redirect, url_for, flash,
-    session, current_app, request
+    Blueprint,
+    render_template,
+    redirect,
+    url_for,
+    flash,
+    session,
+    current_app,
+    request,
 )
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from matplotlib.pyplot import close
+from requests import post, delete
+
 from app.extensions import db
-from app.models import User, Chart, File
+from app.models import User, Chart, File, Notification
 from app.models.friend import Friend
-from app.models.notification import Notification
 from app.models.shared_data import SharedData
 from app.models.associations import SharedChart
-from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm, EditProfileForm
-from app.services import Parser, registry, read_csv, save_to_string, save_figure_to_file
+from app.forms import (
+    SignupForm,
+    LoginForm,
+    UploadForm,
+    ChartForm,
+    AddFriendForm,
+    EditProfileForm,
+)
+from app.services import (
+    Parser,
+    registry,
+    read_csv,
+    save_to_string,
+    save_figure_to_file,
+)
+
 
 bp = Blueprint('routes', __name__)
 
@@ -158,6 +181,13 @@ def friends():
     return render_template('friends.html', friends=friends)
 
 @bp.route('/unfriend/<int:friend_id>', methods=['POST'])
+@login_required
+def unfriend(friend_id):
+    current_user_id = session['user_id']
+    relation = Friend.query.filter_by(user_id=current_user_id, friend_id=friend_id).first()
+    reverse_relation = Friend.query.filter_by(user_id=friend_id, friend_id=current_user_id).first()
+
+@bp.route('/unfriend/<int:friend_id>', methods=['DELETE'])
 @login_required
 def unfriend(friend_id):
     current_user_id = session['user_id']
