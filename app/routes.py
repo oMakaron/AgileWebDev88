@@ -1,5 +1,5 @@
 from functools import wraps
-from io import BytesIO, StringIO
+from io import BytesIO
 import pandas as pd
 import json
 import os, uuid
@@ -16,7 +16,7 @@ from app.models.friend import Friend
 from app.models.notification import Notification
 from app.models.shared_data import SharedData
 from app.models.associations import SharedChart
-from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm
+from app.forms import SignupForm, LoginForm, UploadForm, ChartForm, AddFriendForm, EditProfileForm
 from app.services import Parser, registry, read_csv, save_to_string, save_figure_to_file
 
 bp = Blueprint('routes', __name__)
@@ -53,7 +53,6 @@ def login():
         if not user or not check_password_hash(user.password, form.password.data):
             flash('Invalid email or password.', 'error')
             return render_template('login.html', form=form)
-
         session['user_id'] = user.id
         flash('Login successful!', 'success')
         return redirect(url_for('routes.dashboard'))
@@ -67,12 +66,10 @@ def signup():
         if existing_user:
             flash('Email already registered.', 'error')
             return redirect(url_for('routes.signup'))
-
         new_user = User(fullname=form.name.data, email=form.email.data)
         new_user.set_password(form.password.data)
         db.session.add(new_user)
         db.session.commit()
-
         flash('Signup successful!', 'success')
         return redirect(url_for('routes.login'))
     return render_template('signup.html', form=form)
@@ -102,8 +99,6 @@ def profile():
     user = User.query.get(session['user_id'])
     return render_template("profile.html", user=user)
 
-from app.forms import EditProfileForm
-
 @bp.route('/edit-profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
@@ -117,7 +112,6 @@ def edit_profile():
         db.session.commit()
         flash('Profile updated successfully!', 'success')
         return redirect(url_for('routes.profile'))
-
     form.name.data = user.fullname
     form.email.data = user.email
     return render_template("edit_profile.html", form=form)
@@ -231,23 +225,6 @@ def share_data_with_friend(friend_id):
     return render_template("share_data.html", charts=charts, friend_id=friend_id)
 
 
-
-@bp.route('/message-received')
-@login_required
-def shared_with_me():
-    user_id = session['user_id']
-
-    shared_charts = (
-        db.session.query(Chart)
-        .join(SharedData, SharedData.chart_id == Chart.id)
-        .filter(SharedData.shared_with_user_id == user_id)
-        .all()
-    )
-
-    return render_template("shared_with_me.html", charts=shared_charts)
-
-
-
 # ---------------------------------------------------------------------------------------------------------------------
 # Generate Graph Route
 
@@ -260,32 +237,23 @@ def generate_graph():
     show_config = False
     data = None
 
-    # Handle CSV upload
     if upload_form.submit_upload.data and upload_form.validate_on_submit():
         raw = upload_form.file.data.read()
         df = read_csv(BytesIO(raw))
-
         filename = secure_filename(upload_form.file.data.filename)
         uploads_folder = current_app.config['UPLOADS_FOLDER']
         os.makedirs(uploads_folder, exist_ok=True)
-
         saved_name = f"{uuid.uuid4().hex}_{filename}"
         file_path = os.path.join(uploads_folder, saved_name)
         with open(file_path, 'wb') as f:
             f.write(raw)
-
-        session['csv_string'] = raw.decode('utf-8')
-        session['columns'] = df.columns.tolist()
         session['uploaded_filename'] = filename
-
         new_file = File(name=filename, owner_id=session['user_id'])
         db.session.add(new_file)
         db.session.commit()
         session['file_id'] = new_file.id
-
         return redirect(url_for('routes.generate_graph'))
 
-    # Load file if already uploaded
     if 'file_id' in session:
         file = File.query.get(session['file_id'])
         if file:
@@ -304,7 +272,6 @@ def generate_graph():
                 flash("Uploaded file is missing. Please re-upload.", "error")
                 session.clear()
 
-    # Handle preview chart
     if data is not None and chart_form.submit_generate.data and chart_form.validate_on_submit():
         spec = {'source': data}
         for fld in ['title', 'x_label', 'y_label', 'color', 'grid']:
@@ -330,44 +297,29 @@ def generate_graph():
 
         bound, _ = registry.functions[t].bind_args(**bind_spec)
         fig = registry.functions[t].function(**bound)
-        raw_b64 = save_to_string(fig)
-        close(fig)
 
-        chart_src = f"data:image/png;base64,{raw_b64}"
         store_spec = spec.copy()
         store_spec.pop('source', None)
-        session['last_spec'] = json.dumps(store_spec)
+        chart_json = json.dumps(store_spec)
 
-        # For optional alternate flow (e.g., saving without re-generating)
-        session['pending_chart'] = {
-            'name': spec.get('title') or 'Untitled',
-            'spec': json.dumps(store_spec),
-            'image_data': raw_b64,
-            'file_id': session.get('file_id')
-        }
-
-    # Handle save chart
-    elif request.method == 'POST' and request.form.get('submit_save'):
-        name = request.form.get("name") or "Untitled"
-        spec = request.form.get("spec") or "{}"
-        image_data = request.form.get("image_data")
-        file_id = request.form.get("file_id")
-
-        if not image_data:
-            flash("No chart to save.", "error")
-            return redirect(url_for('routes.generate_graph'))
-
-        chart = Chart(
-            name=name,
+        # Save chart
+        draft_chart = Chart(
+            name=spec.get('title') or 'Untitled',
             owner_id=session['user_id'],
-            file_id=file_id,
-            spec=spec,
-            image_data=image_data
+            file_id=session.get('file_id'),
+            spec=chart_json,
         )
-        db.session.add(chart)
+        db.session.add(draft_chart)
         db.session.commit()
 
-        flash("Chart saved to dashboard!", "success")
+        chart_image_path = save_figure_to_file(fig, draft_chart.id)
+        draft_chart.image_path = chart_image_path
+        db.session.commit()
+
+        session['pending_chart_id'] = draft_chart.id
+        close(fig)
+
+        flash("Chart created and saved!", "success")
         return redirect(url_for('routes.dashboard'))
 
     return render_template(
@@ -383,21 +335,17 @@ def generate_graph():
 @bp.route('/save-chart', methods=['POST'])
 @login_required
 def save_chart():
-    pending = session.get('pending_chart')
-    if not pending:
+    # Grab the draft chart’s ID (stored earlier in session)
+    chart_id = session.pop('pending_chart_id', None)
+    if not chart_id:
         flash("No chart to save.", "error")
         return redirect(url_for('routes.generate_graph'))
 
-    chart = Chart(
-        name       = pending['name'],
-        owner_id   = session['user_id'],
-        file_id    = pending.get('file_id'),
-        spec       = pending['spec'],
-        image_data = pending['image_data']
-    )
-    db.session.add(chart)
-    db.session.commit()
-    session.pop('pending_chart', None)
+    # Load it from the DB (so you get its image_path, spec, etc.)
+    chart = Chart.query.filter_by(id=chart_id, owner_id=session['user_id']).first()
+    if not chart:
+        flash("Pending chart not found or unauthorized.", "error")
+        return redirect(url_for('routes.generate_graph'))
 
     flash("Chart saved to dashboard!", "success")
     return redirect(url_for('routes.dashboard'))
