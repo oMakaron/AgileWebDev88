@@ -3,7 +3,7 @@ from flask import Blueprint, Response, abort, jsonify
 from ..services import registry
 
 
-plots = Blueprint('plots', __name__)
+plots = Blueprint('plots', __name__, url_prefix='/plots')
 
 
 @plots.route('/', methods=["GET"])

@@ -4,22 +4,10 @@
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-10 px-6">
   <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
-    
-    <!-- Configuration Panel -->
+
+    <!-- CSV Upload Form -->
     <aside class="bg-white shadow-md rounded-xl p-6 space-y-6 col-span-1 h-fit">
       <h2 class="text-xl font-semibold text-gray-800">Upload CSV & Configure</h2>
-
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <ul>
-            {% for category, msg in messages %}
-              <li class="text-sm {{ 'text-red-600' if category == 'error' else 'text-green-600' }}">{{ msg }}</li>
-            {% endfor %}
-          </ul>
-        {% endif %}
-      {% endwith %}
-
-      <!-- Upload Form -->
       <form method="POST" enctype="multipart/form-data" class="space-y-4">
         {{ upload_form.hidden_tag() }}
         <div>
@@ -32,88 +20,88 @@
       </form>
 
       {% if show_config %}
-      <div class="text-sm text-gray-600">Uploaded: <strong>{{ uploaded_filename }}</strong></div>
-      <form method="POST" class="space-y-4 mt-4" x-data="{ showAdvanced: false }">
-        {{ chart_form.hidden_tag() }}
+        <div class="text-sm text-gray-600">Uploaded: <strong>{{ uploaded_filename }}</strong></div>
 
-        <div>
-          <label class="text-sm font-medium text-gray-700">{{ chart_form.graph_type.label }}</label>
-          {{ chart_form.graph_type(class="w-full p-2 border border-gray-300 rounded-md") }}
-        </div>
+        <!-- Chart Config Form -->
+        <form method="POST" class="space-y-4 mt-4" x-data="{ showAdvanced: false }">
+          {{ chart_form.hidden_tag() }}
 
-        <div data-chart="xy">
-          <label class="text-sm text-gray-700">X Axis</label>
-          {{ chart_form.x_col(class="w-full p-2 border border-gray-300 rounded-md") }}
-        </div>
-        <div data-chart="xy">
-          <label class="text-sm text-gray-700">Y Axis</label>
-          {{ chart_form.y_col(class="w-full p-2 border border-gray-300 rounded-md") }}
-        </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700">{{ chart_form.graph_type.label }}</label>
+            {{ chart_form.graph_type(class="w-full p-2 border border-gray-300 rounded-md") }}
+          </div>
+          <div data-chart="xy">
+            <label class="text-sm text-gray-700">X Axis</label>
+            {{ chart_form.x_col(class="w-full p-2 border border-gray-300 rounded-md") }}
+          </div>
+          <div data-chart="xy">
+            <label class="text-sm text-gray-700">Y Axis</label>
+            {{ chart_form.y_col(class="w-full p-2 border border-gray-300 rounded-md") }}
+          </div>
+          <div data-chart="histogram pie">
+            <label class="text-sm text-gray-700">Column</label>
+            {{ chart_form.column(class="w-full p-2 border border-gray-300 rounded-md") }}
+          </div>
 
-        <div data-chart="histogram pie">
-          <label class="text-sm text-gray-700">Column</label>
-          {{ chart_form.column(class="w-full p-2 border border-gray-300 rounded-md") }}
-        </div>
+          <!-- Advanced Options Toggle -->
+          <button type="button" @click="showAdvanced = !showAdvanced"
+                  class="w-full text-sm font-semibold text-left text-blue-600 hover:underline mt-4">
+            <span x-text="showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options'"></span>
+          </button>
 
-        <button type="button" @click="showAdvanced = !showAdvanced"
-                class="w-full text-sm font-semibold text-left text-blue-600 hover:underline mt-4">
-          <span x-text="showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options'"></span>
-        </button>
-
-        <div x-show="showAdvanced" x-transition class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-          {% for field in [chart_form.title, chart_form.x_label, chart_form.y_label, chart_form.color, chart_form.figsize, chart_form.grid] %}
-            <div>
-              <label class="text-sm text-gray-700">{{ field.label }}</label>
-              {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
-            </div>
-          {% endfor %}
-
-          <template x-if="document.querySelector('[name=ch-graph_type]').value === 'histogram'">
-            <template>
-              {% for field in [chart_form.bins, chart_form.density, chart_form.cumulative, chart_form.orientation, chart_form.histtype, chart_form.alpha] %}
-                <div>
-                  <label class="text-sm text-gray-700">{{ field.label }}</label>
-                  {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
-                </div>
-              {% endfor %}
+          <!-- Advanced Options -->
+          <div x-show="showAdvanced" x-transition class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            {% for field in [chart_form.title, chart_form.x_label, chart_form.y_label,
+                             chart_form.color, chart_form.figsize, chart_form.grid] %}
+              <div>
+                <label class="text-sm text-gray-700">{{ field.label }}</label>
+                {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
+              </div>
+            {% endfor %}
+            <template x-if="document.querySelector('[name=ch-graph_type]').value === 'histogram'">
+              <template>
+                {% for field in [chart_form.bins, chart_form.density, chart_form.cumulative, chart_form.orientation, chart_form.histtype, chart_form.alpha] %}
+                  <div>
+                    <label class="text-sm text-gray-700">{{ field.label }}</label>
+                    {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
+                  </div>
+                {% endfor %}
+              </template>
             </template>
-          </template>
-
-          <template x-if="document.querySelector('[name=ch-graph_type]').value === 'pie'">
-            <template>
-              {% for field in [chart_form.angle, chart_form.explode, chart_form.autopct, chart_form.shadow, chart_form.radius, chart_form.pctdistance, chart_form.labeldistance, chart_form.colors] %}
-                <div>
-                  <label class="text-sm text-gray-700">{{ field.label }}</label>
-                  {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
-                </div>
-              {% endfor %}
+            <template x-if="document.querySelector('[name=ch-graph_type]').value === 'pie'">
+              <template>
+                {% for field in [chart_form.angle, chart_form.explode, chart_form.autopct, chart_form.shadow, chart_form.radius, chart_form.pctdistance, chart_form.labeldistance, chart_form.colors] %}
+                  <div>
+                    <label class="text-sm text-gray-700">{{ field.label }}</label>
+                    {{ field(class="w-full p-2 border border-gray-300 rounded-md") }}
+                  </div>
+                {% endfor %}
+              </template>
             </template>
-          </template>
-        </div>
+          </div>
 
-        <div class="mt-6">
-          {{ chart_form.submit_generate(class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700") }}
-        </div>
-      </form>
+          <div class="mt-6">
+            {{ chart_form.submit_generate(class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700") }}
+          </div>
+        </form>
       {% endif %}
     </aside>
 
     <!-- Chart Preview -->
     <main class="col-span-3 bg-white shadow-md rounded-xl p-8 flex justify-center items-center min-h-[500px]">
-      {% if chart %}
+      {% if chart_src %}
         <div class="flex flex-col items-center gap-4 w-full">
-          <img src="{{ chart }}" alt="Chart" class="max-w-4xl w-full border border-gray-300 rounded shadow" />
+          <img src="{{ chart_src }}" alt="Chart" class="max-w-4xl w-full border border-gray-300 rounded shadow" />
 
-          <form method="POST" action="{{ url_for('routes.generate_graph') }}">
-            <input type="hidden" name="submit_save" value="1">
-            <input type="hidden" name="image_data" value="{{ chart|replace('data:image/png;base64,','') }}">
-            <input type="hidden" name="spec" value="{{ session['pending_chart']['spec'] }}">
-            <input type="hidden" name="file_id" value="{{ session['pending_chart']['file_id'] }}">
-            <input type="hidden" name="name" value="{{ session['pending_chart']['name'] }}">
-            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
-              Save Chart
-            </button>
-          </form>
+          <!-- Save Chart Button -->
+          {% if session.get('pending_chart_id') %}
+            <form method="POST" action="{{ url_for('routes.save_chart') }}">
+              <button type="submit"
+                      class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
+                Save Chart
+              </button>
+            </form>
+          {% endif %}
         </div>
       {% endif %}
     </main>
@@ -121,32 +109,22 @@
 </div>
 
 <script>
-  const chartRequirements = {
-    line: ['x_col','y_col'], bar: ['x_col','y_col'],
-    scatter: ['x_col','y_col'], area: ['x_col','y_col'],
-    box: ['x_col','y_col'], histogram: ['column'],
-    pie: ['column']
-  };
-
   const showGroups = {
     line: ['xy'], bar: ['xy'], scatter: ['xy'], area: ['xy'],
     box: ['xy'], histogram: ['histogram'], pie: ['pie']
   };
 
   function updateChartInputs() {
-    const type = document.querySelector('[name="ch-graph_type"]').value;
+    const type = document.querySelector('[name="ch-graph_type"]');
+    if (!type) return;
     document.querySelectorAll('[data-chart]').forEach(el => el.style.display = 'none');
-    (showGroups[type] || []).forEach(group => {
-      document.querySelectorAll(`[data-chart~="${group}"]`).forEach(el => el.style.display = '');
+    (showGroups[type.value]||[]).forEach(group=>{
+      document.querySelectorAll(`[data-chart~="${group}"]`).forEach(el=>el.style.display='');
     });
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const selector = document.querySelector('[name="ch-graph_type"]');
-    if (selector) {
-      selector.addEventListener('change', updateChartInputs);
-      updateChartInputs();
-    }
-  });
+  document.addEventListener('DOMContentLoaded', updateChartInputs);
+  document.querySelector('[name="ch-graph_type"]')
+          ?.addEventListener('change', updateChartInputs);
 </script>
 {% endblock %}

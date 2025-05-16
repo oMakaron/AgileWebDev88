@@ -3,45 +3,44 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto mt-10 bg-white shadow-lg rounded-xl p-6">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="mb-4">
-            {% for category, message in messages %}
-                {% if not suppress_flash %}
-                <div class="p-3 rounded {{ 'bg-green-100 text-green-800' if category == 'success' else 'bg-red-100 text-red-800' }}">
-                    {{ message }}
-                </div>
-                {% endif %}
-            {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
     <h2 class="text-2xl font-bold text-gray-800 mb-4">Choose a Chart to Share</h2>
 
-    {% if confirm_chart_id %}
-    <div class="mb-4 p-4 bg-yellow-100 text-yellow-800 rounded">
-        You've already shared this chart. Do you want to share it again?
+    {% if charts|length == 0 %}
+    <div class="text-center text-gray-600 my-6">
+        <p class="mb-2">You don't have any charts to share yet.</p>
+        <a href="{{ url_for('routes.generate_graph') }}"
+           class="text-blue-600 hover:underline font-medium">
+           ➕ Generate a chart now
+        </a>
     </div>
-    {% endif %}
+    {% else %}
 
-    <form method="POST">
-        <input type="hidden" name="confirm" value="{% if confirm_chart_id %}yes{% endif %}">
-        {% for chart in charts %}
-        <div class="flex items-center justify-between p-3 border-b">
-            <label>
-                <input type="radio" name="chart_id" value="{{ chart.id }}"
-                       {% if confirm_chart_id and chart.id == confirm_chart_id|int %}checked{% endif %}
-                       required>
-                {{ chart.name }}
-            </label>
+        {% if confirm_chart_id %}
+        <div class="mb-4 p-4 bg-yellow-100 text-yellow-800 rounded">
+            You've already shared this chart. Do you want to share it again?
         </div>
-        {% endfor %}
-        <div class="mt-4 text-right">
-            <button type="submit"
-                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                {% if confirm_chart_id %}Confirm Share{% else %}Share with Friend{% endif %}
-            </button>
-        </div>
-    </form>
+        {% endif %}
+
+        <form method="POST">
+            <input type="hidden" name="confirm" value="{% if confirm_chart_id %}yes{% endif %}">
+            {% for chart in charts %}
+            <div class="flex items-center justify-between p-3 border-b">
+                <label>
+                    <input type="radio" name="chart_id" value="{{ chart.id }}"
+                           {% if confirm_chart_id and chart.id == confirm_chart_id|int %}checked{% endif %}
+                           required>
+                    {{ chart.name }}
+                </label>
+            </div>
+            {% endfor %}
+            <div class="mt-4 text-right">
+                <button type="submit"
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                    {% if confirm_chart_id %}Confirm Share{% else %}Share with Friend{% endif %}
+                </button>
+            </div>
+        </form>
+
+    {% endif %}
 </div>
 {% endblock %}

@@ -1,3 +1,4 @@
+{# templates/dashboard.html #}
 {% extends "base.html" %}
 {% block title %}Dashboard – DataVizApp{% endblock %}
 
@@ -12,14 +13,22 @@
     </a>
   </div>
 
-  <!-- relative container for absolute cards -->
+  <!-- Relative container for drag/resize -->
   <div id="chartGrid" class="relative min-h-[80vh]">
     {% for chart in charts %}
     <div class="chart-card absolute flex-none w-80 bg-white rounded-lg shadow-md p-4"
          data-chart-id="{{ chart.id }}"
          style="top: {{ loop.index0 * 5 }}rem; left: {{ loop.index0 * 22 }}rem">
       <div class="flex justify-between items-center mb-2">
-        <h2 class="font-semibold text-lg text-gray-700 truncate">{{ chart.name }}</h2>
+        {% if shared_id and chart.id == shared_id %}
+          <h2 class="font-semibold text-lg text-purple-700 truncate">
+            Shared with me: {{ chart.name }}
+          </h2>
+        {% else %}
+          <h2 class="font-semibold text-lg text-gray-700 truncate">
+            {{ chart.name }}
+          </h2>
+        {% endif %}
         <form action="{{ url_for('routes.delete_chart', chart_id=chart.id) }}"
               method="post"
               onsubmit="return confirm('Delete this chart?');">
@@ -28,9 +37,15 @@
           </button>
         </form>
       </div>
-      <img src="data:image/png;base64,{{ chart.image_data }}"
-           alt="Chart {{ chart.name }}"
-           class="w-full h-auto object-contain" />
+      {% if chart.image_path %}
+        <img
+          src="{{ url_for('static', filename='chart_images/' ~ chart.image_path.split('/')[-1]) }}"
+          alt="Chart {{ chart.name }}"
+          class="w-full h-auto object-contain rounded border"
+        />
+      {% else %}
+        <p class="text-gray-500 text-sm">No image available.</p>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
@@ -42,12 +57,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   interact('.chart-card')
-    // free-form drag
     .draggable({
       inertia: true,
       listeners: { move: dragMoveListener }
     })
-    // bottom-right resize
     .resizable({
       edges: { left: false, right: true, bottom: true, top: false },
       inertia: true,
@@ -63,15 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
           let x = parseFloat(target.getAttribute('data-x')) || 0;
           let y = parseFloat(target.getAttribute('data-y')) || 0;
 
-          // update size
-          target.style.width  = event.rect.width  + 'px';
+          target.style.width  = event.rect.width + 'px';
           target.style.height = event.rect.height + 'px';
 
-          // adjust position if resizing from top/left (not used here)
           x += event.deltaRect.left;
           y += event.deltaRect.top;
 
-          // apply translation
           target.style.transform = `translate(${x}px, ${y}px)`;
           target.setAttribute('data-x', x);
           target.setAttribute('data-y', y);
@@ -80,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// shared drag listener
 function dragMoveListener (event) {
   const target = event.target;
   const dx = event.dx, dy = event.dy;

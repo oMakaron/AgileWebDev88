@@ -1,5 +1,7 @@
 # reads the csv and defines frames
 import pandas as pd
+import os, uuid
+from flask import current_app
 
 # does the graphing
 from matplotlib.figure import Figure
@@ -19,3 +21,11 @@ def save_to_string(figure: Figure) -> str:
         buffer.seek(0)
         image = b64encode(buffer.read()).decode('utf-8')
     return image
+
+def save_figure_to_file(fig: Figure, chart_id: int) -> str:
+    folder = current_app.config['IMAGE_FOLDER']
+    os.makedirs(folder, exist_ok=True)
+    fname = f"chart_{chart_id}_{uuid.uuid4().hex[:8]}.png"
+    path = os.path.join(folder, fname)
+    fig.savefig(path, bbox_inches='tight')
+    return fname
