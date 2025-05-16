@@ -8,6 +8,7 @@ from flask import (
     session, current_app, request
 )
 from werkzeug.security import check_password_hash
+from werkzeug.utils import secure_filename
 from matplotlib.pyplot import close
 from app.extensions import db
 from app.models import User, Chart, File
@@ -16,7 +17,6 @@ from app.services import read_csv, save_to_string, save_figure_to_file
 from app.services import registry
 
 bp = Blueprint('routes', __name__)
-
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Utilities
@@ -38,7 +38,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
 # ---------------------------------------------------------------------------------------------------------------------
 # Auth routes
 #
@@ -48,19 +47,14 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if not user:
-            flash('This email is not registered.', 'error')
-            return render_template('login.html', form=form)
-        if not check_password_hash(user.password, form.password.data):
-            flash('Incorrect password.', 'error')
+        if not user or not check_password_hash(user.password, form.password.data):
+            flash('Invalid email or password.', 'error')
             return render_template('login.html', form=form)
 
         session['user_id'] = user.id
         flash('Login successful!', 'success')
         return redirect(url_for('routes.dashboard'))
-        
     return render_template('login.html', form=form)
-
 
 @bp.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -71,10 +65,7 @@ def signup():
             flash('Email already registered.', 'error')
             return redirect(url_for('routes.signup'))
 
-        new_user = User(
-            fullname=form.name.data,
-            email=form.email.data
-        )
+        new_user = User(fullname=form.name.data, email=form.email.data)
         new_user.set_password(form.password.data)
         db.session.add(new_user)
         db.session.commit()
@@ -83,37 +74,30 @@ def signup():
         return redirect(url_for('routes.login'))
     return render_template('signup.html', form=form)
 
-
 @bp.route('/logout')
 def logout():
     session.pop('user_id', None)
     flash('Logout successful!', 'success')
     return redirect(url_for('routes.login'))
 
-
 # ---------------------------------------------------------------------------------------------------------------------
 # Main Pages
-
 
 @bp.route('/')
 def index():
     return render_template("index.html")
 
-
 @bp.route('/dashboard')
 @login_required
 def dashboard():
-    user_id = session['user_id']
-    charts = Chart.query.filter_by(owner_id=user_id).all()
+    charts = Chart.query.filter_by(owner_id=session['user_id']).all()
     return render_template("dashboard.html", charts=charts)
-
 
 @bp.route('/profile')
 @login_required
 def profile():
     user = User.query.get(session['user_id'])
     return render_template("profile.html", user=user)
-
 
 from app.forms import EditProfileForm
 
@@ -122,23 +106,18 @@ from app.forms import EditProfileForm
 def edit_profile():
     user = User.query.get(session['user_id'])
     form = EditProfileForm()
-
     if form.validate_on_submit():
         user.fullname = form.name.data
         user.email = form.email.data
         if form.password.data:
             user.set_password(form.password.data)
-
         db.session.commit()
         flash('Profile updated successfully!', 'success')
         return redirect(url_for('routes.profile'))
 
     form.name.data = user.fullname
     form.email.data = user.email
-
     return render_template("edit_profile.html", form=form)
-
-
 
 @bp.route('/settings')
 @login_required
@@ -146,13 +125,10 @@ def settings():
     user = db.session.get(User, session['user_id'])
     return render_template('settings.html', user=user)
 
-
 @bp.route('/friends')
 @login_required
 def friends():
-     return render_template('friends.html')
-
-
+    return render_template('friends.html')
 
 @bp.route('/add-friend', methods=['GET', 'POST'])
 @login_required
@@ -167,46 +143,57 @@ def analytics():
 # ---------------------------------------------------------------------------------------------------------------------
 # Generate Graph Route
 
-
 @bp.route('/generate-graph', methods=['GET','POST'])
 @login_required
 def generate_graph():
     upload_form = UploadForm(prefix='up')
-    chart_form  = ChartForm(prefix='ch', formdata=request.form)
-
-    chart_src   = None
+    chart_form = ChartForm(prefix='ch', formdata=request.form)
+    chart_src = None
     show_config = False
-    data        = None
+    data = None
 
-    # CSV Upload
     if upload_form.submit_upload.data and upload_form.validate_on_submit():
         raw = upload_form.file.data.read()
-        df  = read_csv(BytesIO(raw))
-        session['csv_string']        = raw.decode('utf-8')
-        session['columns']           = df.columns.tolist()
-        session['uploaded_filename'] = upload_form.file.data.filename
+        df = read_csv(BytesIO(raw))
 
-        new_file = File(name=session['uploaded_filename'], owner_id=session['user_id'])
+        filename = secure_filename(upload_form.file.data.filename)
+        uploads_folder = current_app.config['UPLOADS_FOLDER']
+        os.makedirs(uploads_folder, exist_ok=True)
+
+        saved_name = f"{uuid.uuid4().hex}_{filename}"
+        file_path = os.path.join(uploads_folder, saved_name)
+        with open(file_path, 'wb') as f:
+            f.write(raw)
+
+        session['csv_string'] = raw.decode('utf-8')
+        session['columns'] = df.columns.tolist()
+        session['uploaded_filename'] = filename
+
+        new_file = File(name=filename, owner_id=session['user_id'])
         db.session.add(new_file)
         db.session.commit()
         session['file_id'] = new_file.id
 
         return redirect(url_for('routes.generate_graph'))
 
-    # Load DataFrame from session
-    if 'csv_string' in session:
-        try:
-            data = pd.read_csv(StringIO(session['csv_string']))
-            cols = session['columns']
-            chart_form.x_col.choices  = [('', '– Select X –')]      + [(c,c) for c in cols]
-            chart_form.y_col.choices  = [('', '– Select Y –')]      + [(c,c) for c in cols]
-            chart_form.column.choices = [('', '– Select column –')] + [(c,c) for c in cols]
-            show_config = True
-        except Exception:
-            flash("Could not reload CSV, please re-upload.", "error")
-            session.clear()
+    if 'file_id' in session:
+        file = File.query.get(session['file_id'])
+        if file:
+            uploads_folder = current_app.config['UPLOADS_FOLDER']
+            pattern = f"_{file.name}"
+            matching = [f for f in os.listdir(uploads_folder) if f.endswith(pattern)]
+            if matching:
+                file_path = os.path.join(uploads_folder, matching[0])
+                data = pd.read_csv(file_path)
+                cols = data.columns.tolist()
+                chart_form.x_col.choices = [('', '– Select X –')] + [(c, c) for c in cols]
+                chart_form.y_col.choices = [('', '– Select Y –')] + [(c, c) for c in cols]
+                chart_form.column.choices = [('', '– Select column –')] + [(c, c) for c in cols]
+                show_config = True
+            else:
+                flash("Uploaded file is missing. Please re-upload.", "error")
+                session.clear()
 
-    # Preview
     if data is not None and chart_form.submit_generate.data and chart_form.validate_on_submit():
         spec = {'source': data}
         for fld in ['title','x_label','y_label','color','grid']:
@@ -236,14 +223,12 @@ def generate_graph():
         store_spec.pop('source', None)
         session['last_spec'] = json.dumps(store_spec)
 
-    # Save to disk
     elif data is not None and request.method == 'POST' and request.form.get('action') == 'save':
         if not session.get('last_spec'):
             flash("Please generate a chart before saving.", "error")
         else:
             spec = json.loads(session['last_spec'])
             spec['source'] = data
-
             bound, _ = registry.functions[spec['graph_type']].bind_args(**spec)
             fig = registry.functions[spec['graph_type']].function(**bound)
 
@@ -251,10 +236,10 @@ def generate_graph():
             chart_json = json.dumps(serializable_spec)
 
             new_chart = Chart(
-                name     = spec.get('title', 'Untitled'),
-                owner_id = session['user_id'],
-                file_id  = session['file_id'],
-                spec     = chart_json
+                name=spec.get('title', 'Untitled'),
+                owner_id=session['user_id'],
+                file_id=session['file_id'],
+                spec=chart_json
             )
             db.session.add(new_chart)
             db.session.commit()
@@ -268,11 +253,11 @@ def generate_graph():
 
     return render_template(
         'generate-graph.html',
-        upload_form       = upload_form,
-        chart_form        = chart_form,
-        show_config       = show_config,
-        chart_src         = chart_src,
-        uploaded_filename = session.get('uploaded_filename')
+        upload_form=upload_form,
+        chart_form=chart_form,
+        show_config=show_config,
+        chart_src=chart_src,
+        uploaded_filename=session.get('uploaded_filename')
     )
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -286,15 +271,32 @@ def delete_chart(chart_id):
         flash("Chart not found or not authorized.", "error")
         return redirect(url_for('routes.dashboard'))
 
+    # Store file info before deleting chart
+    file = chart.file
+    file_name = file.name
+    uploads_folder = current_app.config['UPLOADS_FOLDER']
+    pattern = f"_{file_name}"
+
     # Delete the image file from disk
     if chart.image_path:
         image_path = os.path.join(current_app.root_path, 'static', 'chart_images', os.path.basename(chart.image_path))
         if os.path.exists(image_path):
             os.remove(image_path)
 
-    # Delete the chart from the database
+    # Delete chart from database
     db.session.delete(chart)
     db.session.commit()
 
-    flash("Chart deleted successfully.", "success")
+    # If no charts remain that reference this file, delete the file
+    if not file.charts:
+        matching = [f for f in os.listdir(uploads_folder) if f.endswith(pattern)]
+        for f in matching:
+            try:
+                os.remove(os.path.join(uploads_folder, f))
+            except Exception as e:
+                current_app.logger.warning(f"Failed to delete file {f}: {e}")
+        db.session.delete(file)
+        db.session.commit()
+
+    flash("Chart and associated file (if unused) deleted successfully.", "success")
     return redirect(url_for('routes.dashboard'))

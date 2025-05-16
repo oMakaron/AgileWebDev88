@@ -49,6 +49,14 @@ def main():
     else:
         print("chart_images directory already exists.")
 
+    # Ensure uploads directory exists
+    uploads_path = Path("app/uploads")
+    if not uploads_path.exists():
+        print("Creating uploads directory...")
+        os.makedirs(uploads_path)
+    else:
+        print("uploads directory already exists.")
+
     env_path = Path(".env")
     if not env_path.exists():
         print("Creating .env file...")
@@ -68,4 +76,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
