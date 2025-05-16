@@ -1,4 +1,4 @@
-# AgileWebDev88
+# DataVizApp
 An agile web dev project by group 88 of UWA's CITS3403
   
 ## Purpose and Design 
