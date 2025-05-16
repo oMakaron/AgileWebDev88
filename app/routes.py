@@ -181,14 +181,71 @@ def delete_account():
 @bp.route('/friends')
 @login_required
 def friends():
-     return render_template('friends.html')
+    current_user_id = session['user_id']
+    friends = (
+        db.session.query(User)
+        .join(Friend, Friend.friend_id == User.id)
+        .filter(Friend.user_id == current_user_id)
+        .all()
+    )
+    return render_template('friends.html', friends=friends)
 
+@bp.route('/unfriend/<int:friend_id>', methods=['POST'])
+@login_required
+def unfriend(friend_id):
+    current_user_id = session['user_id']
+    relation = Friend.query.filter_by(user_id=current_user_id, friend_id=friend_id).first()
+    reverse_relation = Friend.query.filter_by(user_id=friend_id, friend_id=current_user_id).first()
 
+    if relation:
+        db.session.delete(relation)
+    if reverse_relation:
+        db.session.delete(reverse_relation)
+    user = User.query.get(current_user_id)
+    notification = Notification(
+        user_id=friend_id,
+        message=f"{user.fullname} removed you from friends list."
+    )
+    db.session.add(notification)
+
+    db.session.commit()
+    flash("Friend removed successfully!", "success")
+    return redirect(url_for('routes.friends'))
 
 @bp.route('/add-friend', methods=['GET', 'POST'])
 @login_required
 def add_friend():
-    return render_template('add_friend.html')
+    form = AddFriendForm()
+    current_user_id = session['user_id']
+
+    if form.validate_on_submit():
+        target_user = User.query.filter_by(id=form.user_id.data).first()
+
+        if not target_user:
+            flash("User ID not found.", "error")
+        elif target_user.id == current_user_id:
+            flash("You cannot add yourself as a friend.", "error")
+        else:
+            existing = Friend.query.filter_by(user_id=current_user_id, friend_id=target_user.id).first()
+            if existing:
+                flash("This user is already your friend.", "info")
+            else:
+                db.session.add(Friend(user_id=current_user_id, friend_id=target_user.id))
+                db.session.add(Friend(user_id=target_user.id, friend_id=current_user_id))
+
+                from app.models.notification import Notification
+                notify = Notification(
+                    user_id=target_user.id,
+                    message=f"{User.query.get(current_user_id).fullname} added you as a friend!"
+                )
+                db.session.add(notify)
+
+                db.session.commit()
+                flash(f"Friend '{target_user.fullname}' added successfully!", "success")
+                return redirect(url_for('routes.friends'))
+
+    return render_template('add_friend.html', form=form)
+
 
 @bp.route('/share/<int:chart_id>', methods=['GET', 'POST'])
 @login_required
@@ -458,3 +515,27 @@ def delete_chart(chart_id):
     db.session.commit()
     flash("Chart deleted successfully.", "success")
     return redirect(url_for('routes.dashboard'))
+
+
+@bp.context_processor
+def inject_notifications():
+    if 'user_id' in session:
+        notifs = Notification.query.filter_by(
+            user_id=session['user_id']
+        ).order_by(Notification.timestamp.desc()).limit(10).all()
+        
+        unread_count = Notification.query.filter_by(
+            user_id=session['user_id'],
+            is_read=False
+        ).count()
+
+        return dict(notifications=notifs, unread_count=unread_count)
+    return dict(notifications=[], unread_count=0)
+
+@bp.route('/notifications/read', methods=['POST'])
+@login_required
+def mark_notifications_read():
+    from app.models.notification import Notification
+    Notification.query.filter_by(user_id=session['user_id'], is_read=False).update({'is_read': True})
+    db.session.commit()
+    return '', 204
