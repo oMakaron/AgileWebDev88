@@ -17,14 +17,20 @@ class TestSignup(TestBase):
         # Do normal setup
         super().setUp()
 
-        # Create a logged in user
-        self.user = self.create_user('John Tableman', 'john@tables.com', 'asdflkjh')
+        try:
+            # Create a logged in user
+            self.user = self.create_user('John Tableman', 'john@tables.com', 'asdflkjh')
 
-        self.goto('login')
+            self.goto('login')
 
-        self.driver.find_element(By.ID, "email").send_keys("john@tables.com")
-        self.driver.find_element(By.ID, "password").send_keys("asdflkjh")
-        self.driver.find_element(By.ID, "submit").click()
+            self.driver.find_element(By.ID, "email").send_keys("john@tables.com")
+            self.driver.find_element(By.ID, "password").send_keys("asdflkjh")
+            self.driver.find_element(By.ID, "submit").click()
+
+        except Exception:
+            self.tearDown()
+            raise Exception('Failed to setup test.')
+
 
     def test_create_valid_chart(self) -> None:
         self.goto('dashboard')
