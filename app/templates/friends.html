@@ -14,9 +14,10 @@
                     <h2 class="text-lg font-semibold text-gray-700">John Doe</h2>
                     <p class="text-sm text-gray-600">john.doe@example.com</p>
                 </div>
-                <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                <a href="{{ url_for('routes.share_data_with_friend', friend_id=f.id) }}"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
                     Share Data
-                </button>
+                </a>
             </div>
             <div class="flex items-center justify-between bg-gray-100 p-4 rounded-lg shadow">
                 <div>
