@@ -322,9 +322,9 @@ def generate_graph():
     show_config = False
     data = None
 
+    # --- File upload handling ---
     if upload_form.submit_upload.data and upload_form.validate_on_submit():
         raw = upload_form.file.data.read()
-        df = read_csv(BytesIO(raw))
         filename = secure_filename(upload_form.file.data.filename)
         uploads_folder = current_app.config['UPLOADS_FOLDER']
         os.makedirs(uploads_folder, exist_ok=True)
@@ -332,13 +332,16 @@ def generate_graph():
         file_path = os.path.join(uploads_folder, saved_name)
         with open(file_path, 'wb') as f:
             f.write(raw)
+
         session['uploaded_filename'] = filename
         new_file = File(name=filename, owner_id=session['user_id'])
         db.session.add(new_file)
         db.session.commit()
         session['file_id'] = new_file.id
+
         return redirect(url_for('routes.generate_graph'))
 
+    # --- Load previous upload into DataFrame & configure form choices ---
     if 'file_id' in session:
         file = File.query.get(session['file_id'])
         if file:
@@ -348,7 +351,7 @@ def generate_graph():
             if matching:
                 file_path = os.path.join(uploads_folder, matching[0])
                 data = pd.read_csv(file_path)
-                cols = data.columns.tolist()
+                cols = list(data.columns)
                 chart_form.x_col.choices = [('', '– Select X –')] + [(c, c) for c in cols]
                 chart_form.y_col.choices = [('', '– Select Y –')] + [(c, c) for c in cols]
                 chart_form.column.choices = [('', '– Select column –')] + [(c, c) for c in cols]
@@ -357,12 +360,16 @@ def generate_graph():
                 flash("Uploaded file is missing. Please re-upload.", "error")
                 session.clear()
 
+    # --- Chart generation ---
     if data is not None and chart_form.submit_generate.data and chart_form.validate_on_submit():
         spec = {'source': data}
+        # copy over optional fields
         for fld in ['title', 'x_label', 'y_label', 'color', 'grid']:
             v = getattr(chart_form, fld).data
             if v:
                 spec[fld] = v
+
+        # parse figsize if provided
         if chart_form.figsize.data:
             try:
                 w, h = map(int, chart_form.figsize.data.split('x'))
@@ -373,7 +380,7 @@ def generate_graph():
         t = chart_form.graph_type.data
         spec['graph_type'] = t
 
-        # Required fields validation based on chart type
+        # require both axes for two-axis charts
         if t in ['line', 'bar', 'scatter', 'area', 'box']:
             x = chart_form.x_col.data
             y = chart_form.y_col.data
@@ -388,43 +395,37 @@ def generate_graph():
                 return redirect(url_for('routes.generate_graph'))
             spec['column'] = col
 
+        # bind and validate types
         bind_spec = spec.copy()
         bind_spec.pop('graph_type', None)
-
         try:
             bound, _ = registry.functions[t].bind_args(**bind_spec)
 
-            # Extra validation for numeric-only charts
-            if t in ['line', 'scatter', 'bar', 'area', 'box']:
-                x_col = bound.get("x_col")
-                y_col = bound.get("y_col")
-                if x_col and not pd.api.types.is_numeric_dtype(data[x_col]):
-                    flash("X axis must be numeric for this chart type.", "error")
-                    return redirect(url_for("routes.generate_graph"))
-                if y_col and not pd.api.types.is_numeric_dtype(data[y_col]):
-                    flash("Y axis must be numeric for this chart type.", "error")
-                    return redirect(url_for("routes.generate_graph"))
+            # only scatter needs numeric X
+            if t == 'scatter':
+                x_col = bound.get('x_col')
+                if not pd.api.types.is_numeric_dtype(data[x_col]):
+                    flash("X axis must be numeric for scatter charts.", "error")
+                    return redirect(url_for('routes.generate_graph'))
 
-            # Handle invalid figsize earlier
-            if chart_form.figsize.data:
-                try:
-                    w, h = map(int, chart_form.figsize.data.lower().split('x'))
-                    spec['figsize'] = (w, h)
-                except ValueError:
-                    flash("Invalid figure size. Use e.g. 10x6", "warning")
-                    return redirect(url_for("routes.generate_graph"))
+            # all two-axis charts need numeric Y
+            if t in ['line', 'scatter', 'bar', 'area', 'box']:
+                y_col = bound.get('y_col')
+                if not pd.api.types.is_numeric_dtype(data[y_col]):
+                    flash("Y axis must be numeric for this chart type.", "error")
+                    return redirect(url_for('routes.generate_graph'))
 
             fig = registry.functions[t].function(**bound)
 
         except KeyError as e:
             flash(f"Column '{e.args[0]}' does not exist in the CSV.", "error")
-            return redirect(url_for("routes.generate_graph"))
-
+            return redirect(url_for('routes.generate_graph'))
         except Exception as e:
             current_app.logger.error(f"Chart generation error: {e}")
-            flash("An error occurred while generating the chart. Please check axis and input types.", "error")
-            return redirect(url_for("routes.generate_graph"))
+            flash("An error occurred generating the chart. Please check your inputs.", "error")
+            return redirect(url_for('routes.generate_graph'))
 
+        # store spec & save chart record
         store_spec = spec.copy()
         store_spec.pop('source', None)
         chart_json = json.dumps(store_spec)
@@ -438,16 +439,17 @@ def generate_graph():
         db.session.add(draft_chart)
         db.session.commit()
 
-        chart_image_path = save_figure_to_file(fig, draft_chart.id)
-        draft_chart.image_path = chart_image_path
+        # save image file and close figure
+        path = save_figure_to_file(fig, draft_chart.id)
+        draft_chart.image_path = path
         db.session.commit()
-
-        session['pending_chart_id'] = draft_chart.id
         close(fig)
 
+        session['pending_chart_id'] = draft_chart.id
         flash("Chart created and saved!", "success")
         return redirect(url_for('routes.dashboard'))
 
+    # render form
     return render_template(
         'generate-graph.html',
         upload_form=upload_form,
