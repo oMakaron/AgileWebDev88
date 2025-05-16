@@ -2,19 +2,18 @@ from functools import wraps
 from io import BytesIO, StringIO
 import pandas as pd
 import json
-
+import os, uuid
 from flask import (
-    Blueprint, render_template, request, redirect, url_for, flash,
-    session, current_app, jsonify
+    Blueprint, render_template, redirect, url_for, flash,
+    session, current_app, request
 )
 from werkzeug.security import check_password_hash
 from matplotlib.pyplot import close
-
 from app.extensions import db
-from app.models import User, Chart
+from app.models import User, Chart, File
 from app.forms import SignupForm, LoginForm, UploadForm, ChartForm
-from app.services import Parser, registry, read_csv, save_to_string
-
+from app.services import read_csv, save_to_string, save_figure_to_file
+from app.services import registry
 
 bp = Blueprint('routes', __name__)
 
@@ -169,7 +168,7 @@ def analytics():
 # Generate Graph Route
 
 
-@bp.route('/generate-graph', methods=['GET', 'POST'])
+@bp.route('/generate-graph', methods=['GET','POST'])
 @login_required
 def generate_graph():
     upload_form = UploadForm(prefix='up')
@@ -178,105 +177,100 @@ def generate_graph():
     show_config = False
     data        = None
 
-    # --- 1. Handle File Upload ---
+    # 1) CSV Upload
     if upload_form.submit_upload.data and upload_form.validate_on_submit():
-        file_data = upload_form.file.data.read()
-        df = read_csv(BytesIO(file_data))
+        raw = upload_form.file.data.read()
+        df  = read_csv(BytesIO(raw))
+        session['csv_string']       = raw.decode('utf-8')
+        session['columns']          = df.columns.tolist()
+        session['uploaded_filename']= upload_form.file.data.filename
 
-        session['csv_string']     = file_data.decode('utf-8')
-        session['columns']        = df.columns.tolist()
-        session['uploaded_filename'] = upload_form.file.data.filename
-
-        from app.models import File
         new_file = File(name=session['uploaded_filename'], owner_id=session['user_id'])
-        db.session.add(new_file)
-        db.session.commit()
+        db.session.add(new_file); db.session.commit()
         session['file_id'] = new_file.id
 
         return redirect(url_for('routes.generate_graph'))
 
-    # --- 2. Load DataFrame from session ---
+    # 2) Load DataFrame from session
     if 'csv_string' in session:
         try:
             data = pd.read_csv(StringIO(session['csv_string']))
             cols = session['columns']
-            chart_form.x_col.choices = [('', '– Select X –')] + [(c, c) for c in cols]
-            chart_form.y_col.choices = [('', '– Select Y –')] + [(c, c) for c in cols]
-            chart_form.column.choices = [('', '– Select column –')] + [(c, c) for c in cols]
+            chart_form.x_col.choices  = [('', '– Select X –')]      + [(c,c) for c in cols]
+            chart_form.y_col.choices  = [('', '– Select Y –')]      + [(c,c) for c in cols]
+            chart_form.column.choices = [('', '– Select column –')] + [(c,c) for c in cols]
             show_config = True
         except Exception as e:
-            flash("Failed to load saved CSV data. Try re-uploading.", "error")
-            current_app.logger.error("CSV read error", exc_info=e)
+            current_app.logger.error("CSV load failed", exc_info=e)
+            flash("Could not reload CSV, please re-upload.", "error")
             session.clear()
 
-    # --- 3. Chart Generation ---
-    if chart_form.submit_generate.data and chart_form.validate_on_submit() and data is not None:
-        try:
-            plot_type = chart_form.graph_type.data
-            plotter   = registry.functions.get(plot_type)
+    # 3a) Preview
+    if data is not None and chart_form.submit_generate.data and chart_form.validate_on_submit():
+        # build full spec including DataFrame
+        spec = {'source': data}
+        for fld in ['title','x_label','y_label','color','grid']:
+            v = getattr(chart_form, fld).data
+            if v: spec[fld] = v
+        if chart_form.figsize.data:
+            try:
+                w,h = map(int, chart_form.figsize.data.split('x'))
+                spec['figsize'] = (w,h)
+            except:
+                flash("Invalid figure size. Use e.g. 10x6", 'warning')
 
-            # build args from form
-            args = {'source': data}
-            for attr in ['title','x_label','y_label','color','figsize']:
-                val = getattr(chart_form, attr).data
-                if val:
-                    args[attr] = val
+        t = chart_form.graph_type.data
+        spec['graph_type'] = t
+        if t in ['line','bar','scatter','area','box']:
+            spec['x_col'], spec['y_col'] = chart_form.x_col.data, chart_form.y_col.data
+        else:
+            spec['column'] = chart_form.column.data
 
-            if chart_form.grid.data:
-                args['grid'] = chart_form.grid.data
+        # draw preview
+        bound, _ = registry.functions[t].bind_args(**spec)
+        fig       = registry.functions[t].function(**bound)
+        raw_b64   = save_to_string(fig)
+        close(fig)
+        chart     = f"data:image/png;base64,{raw_b64}"
 
-            if chart_form.figsize.data:
-                try:
-                    w,h = map(int, chart_form.figsize.data.split('x'))
-                    args['figsize'] = (w,h)
-                except ValueError:
-                    flash("Invalid figure size. Use e.g. 10x6", 'warning')
+        # store JSON-serializable spec (no DataFrame) for later save
+        store_spec = spec.copy()
+        store_spec.pop('source', None)
+        session['last_spec'] = json.dumps(store_spec)
 
-            # column selections
-            if plot_type in ['line','bar','scatter','area','box']:
-                args['x_col'] = chart_form.x_col.data
-                args['y_col'] = chart_form.y_col.data
-            elif plot_type == 'histogram':
-                args['column'] = chart_form.column.data
-                for attr in ['bins','density','cumulative','orientation','histtype','alpha']:
-                    val = getattr(chart_form, attr).data
-                    if val:
-                        args[attr] = val
-            elif plot_type == 'pie':
-                args['column'] = chart_form.column.data
-                for attr in ['angle','explode','autopct','shadow','radius','pctdistance','labeldistance','colors']:
-                    val = getattr(chart_form, attr).data
-                    if val:
-                        args[attr] = val
+    # 3b) Save to disk
+    elif data is not None and request.method=='POST' and request.form.get('ch-submit_save'):
+        # reload spec
+        if not session.get('last_spec'):
+            flash("Please generate a chart before saving.", "error")
+        else:
+            store_spec = json.loads(session['last_spec'])
+            store_spec['source'] = data
 
-            # Generate the figure
-            bound, _ = plotter.bind_args(**args)
-            fig       = plotter.function(**bound)
+            # draw figure
+            bound, _ = registry.functions[store_spec['graph_type']].bind_args(**store_spec)
+            fig       = registry.functions[store_spec['graph_type']].function(**bound)
 
-            # Capture raw base64 (no prefix) for preview + storage
-            raw_b64 = save_to_string(fig)
-            chart   = f"data:image/png;base64,{raw_b64}"
+            # persist Chart record
+            new_chart = Chart(
+                name     = store_spec.get('title','Untitled'),
+                owner_id = session['user_id'],
+                file_id  = session['file_id'],
+                spec     = json.dumps(store_spec)
+            )
+            db.session.add(new_chart); db.session.commit()
+
+            # save PNG
+            fname = save_figure_to_file(fig, new_chart.id)
             close(fig)
 
-            # Clean up for DB
-            args.pop('source', None)
-            args['graph_type'] = plot_type
-
-            new_chart = Chart(
-                name       = args.get('title') or 'Untitled',
-                owner_id   = session['user_id'],
-                file_id    = session.get('file_id'),
-                spec       = json.dumps(args)
-            )
-            db.session.add(new_chart)
+            new_chart.image_path = fname
             db.session.commit()
 
-        except Exception as e:
-            current_app.logger.error("Chart generation failed", exc_info=e)
-            flash(f"Chart error: {e}", "error")
+            chart = fname
 
     return render_template(
-        "generate-graph.html",
+        'generate-graph.html',
         upload_form       = upload_form,
         chart_form        = chart_form,
         show_config       = show_config,
