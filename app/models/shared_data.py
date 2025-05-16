@@ -13,5 +13,5 @@ class SharedData(Base):
     shared_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     chart = db.relationship("Chart", backref="shared_entries", lazy=True)
-    shared_with_user = db.relationship("User", foreign_keys=[shared_with_user_id])
-    shared_by_user = db.relationship("User", foreign_keys=[shared_by_user_id])
+    shared_with_user = db.relationship("User", foreign_keys=[shared_with_user_id], back_populates='shared_with_you')
+    shared_by_user = db.relationship("User", foreign_keys=[shared_by_user_id], back_populates='shared_by_you')

@@ -8,3 +8,5 @@ class Notification(Base):
     message = db.Column(db.String(255), nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     href = db.Column(db.String(255), nullable=True)
+
+    user_notifications = db.relationship("User", back_populates="notifications")
