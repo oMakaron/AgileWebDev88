@@ -1,6 +1,21 @@
 # AgileWebDev88
 An agile web dev project by group 88 of UWA's CITS3403  
-Name and readme soon to be changed after discussion
+
+
+## Purpose and Design 
+This project is a data visualisation web application that helps users better understand their data. Users can upload CSV files, choose which columns to use as the X and Y axes, and then generate clear, visual graphs. They can also share selected charts with their friends on the platform. The goal is to make data easier to see, explore, and share.
+
+The design of the application focuses on being simple, useful, and clean. It uses TailwindCSS to create a clear and responsive interface. The layout makes it easy for users to upload data, view all the charts they have generated, and share specific charts with others. The app is especially helpful for students or non-technical users who want to quickly visualise data without writing code.
+
+## Group Members
+
+| UWA ID   | Name          | GitHub Username |
+|----------|-------------  |-----------------|
+| 23810522 | Yuki Wei      | yuki-kii        |
+| 23821639 | Daniel Jones  | DanielEJones    |
+| 24328931 | Nick Alexander| oMakaron        |
+| 23920389 | Will Vetter   | William Vetter  |
+
 
 ## Getting Set Up
 The below steps should be sufficient to get the project up and running on your local machine (at least for Unix-like operating systems).
