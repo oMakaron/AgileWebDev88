@@ -70,6 +70,9 @@
       <a href="/generate-graph" class="block hover:text-blue-400">Generate Graph</a>
       <a href="/friends"   class="block hover:text-blue-400">Share</a>
       <a href="/profile"   class="block hover:text-blue-400">Profile</a>
+      <a href="{{ url_for('routes.shared_with_me') }}" class="block hover:text-blue-400">
+        Message Received
+      </a>
     </nav>
   </aside>
 
@@ -96,7 +99,6 @@
       <!-- Navigation Links -->
       <nav class="ml-8 flex space-x-6 text-sm">
         <a href="/dashboard" class="hover:text-blue-600">Dashboard</a>
-        <a href="/analytics" class="hover:text-blue-600">Analytics</a>
         <a href="/settings" class="hover:text-blue-600">Settings</a>
       </nav>
 
@@ -183,5 +185,6 @@
       }
     });
   </script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

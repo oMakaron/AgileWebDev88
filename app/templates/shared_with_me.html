@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Message Received{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 space-y-6">
+  <h1 class="text-2xl font-bold text-gray-800 mb-4">Charts Shared With You</h1>
+
+  {% if charts %}
+    {% for chart in charts %}
+    <div class="p-4 bg-white shadow-md border border-gray-200 rounded-lg hover:shadow-lg transition">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-gray-800">{{ chart.name }}</h2>
+        <span class="text-xs text-gray-500">
+          {{ chart.shared_entries[0].shared_at.strftime('%Y-%m-%d') }}
+        </span>
+      </div>
+
+      <p class="text-sm text-gray-600 mb-2">
+        Shared by <strong>{{ chart.shared_entries[0].shared_by_user.fullname }}</strong>
+      </p>
+
+      {% if chart.image_data %}
+      <div class="overflow-x-auto max-w-full">
+        <img src="data:image/png;base64,{{ chart.image_data }}"
+             alt="Chart Image"
+             class="max-w-md max-h-64 rounded border border-gray-300 shadow-sm">
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-gray-500">No charts have been shared with you yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
