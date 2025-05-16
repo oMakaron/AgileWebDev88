@@ -545,16 +545,3 @@ def mark_notifications_read():
 def shared_with_me():
     flash("This page is currently unavailable.", "info")
     return redirect(url_for('routes.dashboard'))
-
-@bp.route('/notifications/read/<int:notif_id>', methods=['PATCH'])
-@login_required
-def mark_notifications_read(notif_id):
-    try:
-        notif = Notification.query.get(notif_id)
-        if(notif.user_id == session['user_id']):
-            full_url = request.host_url.rstrip('/') + url_for('notifications.mark_read', notif_id=notif_id)
-            response = patch(full_url)
-            return redirect(notif.href)        
-    except Exception:
-        flash('error handling notification', 'error')
-    return redirect(url_for('routes.dashboard'))
