@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request, session, abort, current_app, url_
 from app.models import Chart, File
 from app.extensions import db
 from app.services import registry, read_csv
+from app.services.plots import save_figure_to_file
 from .utils import require_login, get_user, UPLOADS_FOLDER
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -94,17 +95,9 @@ def _generate_and_store_image(chart: Chart):
             os.remove(chart.image_path)
 
         # Save new image file and update path
-        chart.image_path = _save_figure_to_file(fig, chart.id)
+        chart.image_path = save_figure_to_file(fig, chart.id)
         db.session.commit()
 
     except (FileNotFoundError, SQLAlchemyError, Exception) as e:
         db.session.rollback()
         raise RuntimeError(f"Failed to generate chart image: {e}")
-
-def _save_figure_to_file(fig, chart_id):
-    filename = f"chart_{chart_id}_{uuid.uuid4().hex[:8]}.png"
-    folder = current_app.config['IMAGE_FOLDER']
-    os.makedirs(folder, exist_ok=True)
-    filepath = os.path.join(folder, filename)
-    fig.savefig(filepath, bbox_inches='tight')
-    return os.path.join('static', 'chart_images', filename)
