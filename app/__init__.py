@@ -16,7 +16,7 @@ def create_app(configuration: Type[Config]) -> Flask:
     moment.init_app(app)
 
     with app.app_context():
-        from app.models import User, File, Chart, SharedFile, SharedChart, Friend
+        from app.models import User, File, Chart, SharedFile, SharedChart, Friend, Notification
         from app.routes import bp
         from app.api import api as api_blueprint
 
