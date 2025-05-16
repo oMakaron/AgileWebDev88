@@ -213,7 +213,10 @@ def generate_graph():
         else:
             spec['column'] = chart_form.column.data
 
-        bound, _ = registry.functions[t].bind_args(**spec)
+        bind_spec = spec.copy()
+        bind_spec.pop('graph_type', None)  # Avoid passing to bind_args/function
+
+        bound, _ = registry.functions[t].bind_args(**bind_spec)
         fig = registry.functions[t].function(**bound)
         raw_b64 = save_to_string(fig)
         close(fig)
