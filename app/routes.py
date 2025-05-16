@@ -551,5 +551,13 @@ def mark_notifications_read():
 @bp.route('/message-received')
 @login_required
 def shared_with_me():
-    flash("This page is currently unavailable.", "info")
-    return redirect(url_for('routes.dashboard'))
+    user_id = session['user_id']
+
+    shared_charts = (
+        db.session.query(Chart)
+        .join(SharedData, SharedData.chart_id == Chart.id)
+        .filter(SharedData.shared_with_user_id == user_id)
+        .all()
+    )
+
+    return render_template("shared_with_me.html", charts=shared_charts)
