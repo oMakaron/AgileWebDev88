@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as Expect
 from app import db
 from app.models import User
 
-from .common import TestBase, make_path, LOCAL_HOST
+from common import TestBase, make_path, LOCAL_HOST
 
 
 class TestSignup(TestBase):

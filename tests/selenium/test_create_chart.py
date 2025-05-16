@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as Expect
 
 from app import db
 from app.models import Chart
-from .common import TestBase, make_path
+from common import TestBase, make_path
 
 
 class TestSignup(TestBase):
